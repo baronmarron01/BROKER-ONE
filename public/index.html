@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="BROKER-ONE - MVP de courtage B2B assisté et explicable">
+  <title>BROKER-ONE — Console MVP</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/search.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">BROKER<span>ONE</span></a>
+    <nav class="top-actions"><div class="status"><i id="healthDot"></i><span id="healthText">Vérification API…</span></div><button id="accountBtn" class="nav-btn">Connexion</button><button id="logoutBtn" class="nav-btn" hidden>Déconnexion</button></nav>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">COURTAGE B2B ASSISTÉ</p>
+      <h1>De votre besoin à une liste de fournisseurs <em>explicable.</em></h1>
+      <p>Prototype fonctionnel de classification des risques et de matching déterministe. Aucun paiement et aucun engagement automatique.</p>
+    </section>
+
+    <section class="grid">
+      <form id="requestForm" class="panel">
+        <div class="panel-head"><div><small>ÉTAPE 01</small><h2>Définir la demande</h2></div><span class="badge">Local + API</span></div>
+        <label>Besoin détaillé<textarea id="description" required minlength="10" maxlength="4000">Je cherche une machine commerciale d'emballage alimentaire avec livraison à Montréal.</textarea></label>
+        <div class="two">
+          <label>Catégorie<select id="category"><option value="industrial">Équipement industriel</option><option value="it">Logiciel / TI</option><option value="beauty">Équipement esthétique</option><option value="medical">Médical réglementé</option><option value="legal">Service juridique</option></select></label>
+          <label>Localisation<input id="location" value="Montréal, Québec"></label>
+        </div>
+        <div class="three">
+          <label>Budget min.<input id="minBudget" type="number" min="0" value="5000"></label>
+          <label>Budget max.<input id="maxBudget" type="number" min="0" value="12000"></label>
+          <label>Devise<select id="currency"><option>CAD</option><option>USD</option><option>EUR</option></select></label>
+        </div>
+        <fieldset><legend>Contraintes opérationnelles</legend>
+          <label class="check"><input id="physical" type="checkbox"><span>Présence physique</span></label>
+          <label class="check"><input id="inspection" type="checkbox"><span>Inspection</span></label>
+          <label class="check"><input id="installation" type="checkbox" checked><span>Installation</span></label>
+          <label class="check"><input id="licensed" type="checkbox"><span>Professionnel licencié</span></label>
+        </fieldset>
+        <button class="primary" type="submit">Analyser et classer <span>→</span></button>
+        <button class="secondary" id="clarifyBtn" type="button">Demander les questions de clarification IA</button>
+      </form>
+
+      <section class="panel result-panel" aria-live="polite">
+        <div class="panel-head"><div><small>ÉTAPE 02</small><h2>Décision opérationnelle</h2></div><span class="badge muted" id="traceBadge">En attente</span></div>
+        <div id="emptyState" class="empty"><div class="radar"></div><p>Soumettez une demande pour calculer sa classe, ses risques et ses approbations requises.</p></div>
+        <div id="classification" hidden>
+          <div class="class-row"><div><small>CLASSE DE PIPELINE</small><strong id="classValue">—</strong></div><div><small>MODE</small><strong id="modeValue">—</strong></div></div>
+          <h3>Axes de risque</h3><div id="riskGrid" class="risk-grid"></div>
+          <h3>Approbations</h3><div id="gates" class="chips"></div>
+          <p class="notice">Classification opérationnelle seulement — aucune décision légale ou achat automatique.</p>
+          <button id="matchBtn" class="primary" type="button">Rechercher et classer les fournisseurs <span>→</span></button>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel matches" id="matchesPanel" hidden>
+      <div class="panel-head"><div><small>ÉTAPE 03 · PHASE 04</small><h2>Fournisseurs recherchés et classés</h2></div><span class="badge" id="searchBadge">Registre + preuves</span></div>
+      <div id="matches"></div>
+    </section>
+
+    <section class="workspace" id="workspace">
+      <div class="workspace-head"><div><p class="eyebrow">ESPACE SÉCURISÉ</p><h2>Opérations et traçabilité</h2></div><span id="sessionBadge" class="badge muted">Mode visiteur</span></div>
+      <div class="workspace-tabs" role="tablist">
+        <button class="tab active" data-view="history">Historique</button><button class="tab" data-view="providers">Fournisseurs</button><button class="tab" data-view="quotes">Devis</button><button class="tab" data-view="provider">Espace fournisseur</button><button class="tab" data-view="admin" id="adminTab" hidden>Administration</button>
+      </div>
+      <section class="panel workspace-view" id="historyView"><div class="panel-head"><div><small>PHASES 01 + 07</small><h2>Demandes et piste d’audit</h2></div><button id="refreshHistory" class="mini">Actualiser</button></div><div id="historyContent" class="list-empty">Connectez-vous pour enregistrer et retrouver vos demandes.</div></section>
+      <section class="panel workspace-view" id="providersView" hidden><div class="panel-head"><div><small>PHASE 03</small><h2>Registre fournisseurs</h2></div><span class="badge">Vérifiés</span></div><div id="providerDirectory" class="cards"></div></section>
+      <section class="panel workspace-view" id="quotesView" hidden><div class="panel-head"><div><small>PHASE 05</small><h2>Demandes de devis</h2></div><span class="badge muted">Sans paiement</span></div><div id="quotesContent" class="list-empty">Connectez-vous pour gérer vos devis.</div></section>
+      <section class="panel workspace-view" id="providerView" hidden><div class="panel-head"><div><small>PHASES 03 + 05</small><h2>Profil et réponses fournisseur</h2></div></div><form id="providerForm"><div class="two"><label>Nom commercial<input id="providerName" required maxlength="160"></label><label>Site web<input id="providerWebsite" type="url" placeholder="https://"></label></div><label>Description<textarea id="providerDescription" maxlength="2000"></textarea></label><div class="two"><label>Catégories (séparées par virgule)<input id="providerCategories" value="industrial"></label><label>Zones desservies<input id="providerZones" value="Québec"></label></div><button class="primary" type="submit">Enregistrer le profil <span>→</span></button></form><div id="providerInbox" class="stack"></div></section>
+      <section class="panel workspace-view" id="adminView" hidden><div class="panel-head"><div><small>PHASE 06</small><h2>Console administrative</h2></div><span class="badge">Accès contrôlé</span></div><div id="adminStats" class="stat-grid"></div></section>
+    </section>
+
+    <dialog id="aiDialog"><form method="dialog"><button class="close" aria-label="Fermer">×</button><small>ASSISTANT BORNÉ</small><h2>Questions de clarification</h2><div id="aiOutput" class="ai-output">Chargement…</div><button class="primary">Fermer</button></form></dialog>
+    <dialog id="authDialog"><form id="authForm"><button type="button" class="close" id="authClose" aria-label="Fermer">×</button><small>ACCÈS SÉCURISÉ</small><h2 id="authTitle">Connexion</h2><div id="signupFields" hidden><div class="two"><label>Nom<input id="displayName" autocomplete="name"></label><label>Entreprise<input id="companyName" autocomplete="organization"></label></div><label>Type de compte<select id="accountType"><option value="buyer">Acheteur</option><option value="provider">Fournisseur</option></select></label></div><label>Courriel<input id="authEmail" type="email" autocomplete="email" required></label><label>Mot de passe<input id="authPassword" type="password" minlength="8" autocomplete="current-password" required></label><p id="authMessage" class="form-message"></p><button class="primary" id="authSubmit" type="submit">Se connecter <span>→</span></button><button class="secondary" id="authToggle" type="button">Créer un compte</button></form></dialog>
+  </main>
+  <footer>BROKER-ONE v2.4 · Recherche hybride avec provenance · Aucun paiement réel</footer>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

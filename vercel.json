@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/app.js", "destination": "/public/app.js" },
+    { "source": "/db.js", "destination": "/public/db.js" },
+    { "source": "/styles.css", "destination": "/public/styles.css" }
+    ,{ "source": "/workspace.css", "destination": "/public/workspace.css" },
+    { "source": "/search.css", "destination": "/public/search.css" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://qcymqanttwaoliksosui.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" }
+      ]
+    }
+  ]
+}

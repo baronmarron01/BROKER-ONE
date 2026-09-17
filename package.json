@@ -1,0 +1,15 @@
+{
+  "name": "broker-one-mvp",
+  "version": "2.4.0",
+  "private": true,
+  "type": "module",
+  "description": "BROKER-ONE secure sourcing and matching MVP",
+  "scripts": {
+    "dev:local": "node --env-file-if-exists=.env.local scripts/dev-server.js",
+    "test": "node --test",
+    "check": "node --check api/ai.js && node --check api/classify.js && node --check api/search.js && node --check api/match.js && node --check api/health.js"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}
