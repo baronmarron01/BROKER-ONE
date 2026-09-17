@@ -8,7 +8,7 @@
 | Matching explicable | Implémenté sur candidats fournis | `rankCandidates()` |
 | Recherche registre réelle | Implémenté | FTS français, GIN, filtres, `/api/search` |
 | Provenance de recherche | Implémenté | `provider_sources`, `search_runs`, `search_results` |
-| Découverte externe | Implémenté | GLEIF + Wikidata, licences exposées, cache, timeout et dégradation contrôlée |
+| Découverte externe | Implémenté | GLEIF + Wikidata, planification bilingue, fusion des preuves, licences exposées, cache, timeout et dégradation contrôlée |
 | Overture Places | Architecture/licence préparée | Ingestion en lot à brancher sur stockage persistant |
 | Assistant IA | Implémenté, activation par clé | `api/ai.js` |
 | Authentification | Implémenté | Supabase Auth, profils et sessions |
@@ -24,4 +24,4 @@
 | Contrôles HTTP | Implémenté pour MVP | `lib/http.js` |
 | Rate limiting distribué | Non implémenté | Redis/KV requis avant exposition publique |
 
-Le terme « production-ready » reste conditionnel : la recherche interne est en place, mais il reste la découverte externe, la messagerie transactionnelle, les contrôles KYB/KYC, l’observabilité distribuée et la validation juridique.
+Le terme « production-ready » reste conditionnel : la recherche interne et la découverte externe sont en place, mais il reste le workflow de vérification humaine, la messagerie transactionnelle, les contrôles KYB/KYC, l’observabilité distribuée et la validation juridique.

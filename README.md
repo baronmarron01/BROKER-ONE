@@ -1,4 +1,4 @@
-# BROKER-ONE MVP v2.4
+# BROKER-ONE MVP v2.5
 
 MVP fonctionnel de courtage B2B assisté. Cette reconstruction transforme le proxy OpenAI initial en une application testable avec interface, classification de risque, matching explicable et assistant IA borné.
 
@@ -19,7 +19,7 @@ MVP fonctionnel de courtage B2B assisté. Cette reconstruction transforme le pro
 - Console administrative activée uniquement par rôle sécurisé dans `app_metadata`.
 - `POST /api/search` : recherche plein texte française, filtres catégorie/zone/budget, rappel élargi et provenance.
 - Historique des exécutions de recherche et snapshots de preuves par résultat.
-- Découverte externe hybride sans clé via GLEIF et Wikidata, avec timeout, cache court, déduplication et échec partiel toléré.
+- Découverte externe hybride sans clé via GLEIF et Wikidata, avec requêtes bilingues planifiées, timeout par requête, cache court, fusion des preuves, déduplication et échec partiel toléré.
 - Registre machine-readable des licences et droits; les candidats externes restent non vérifiés et non contactables avant validation.
 - Registre initial de fournisseurs de démonstration; aucun achat ou paiement réel.
 
@@ -94,7 +94,7 @@ Ce MVP ne prétend pas être la plateforme complète du document maître. Resten
 
 ## Architecture suivante recommandée
 
-Le registre interne dispose maintenant d’une recherche réelle et traçable. Ajouter ensuite un connecteur externe autorisé, pgvector pour le rappel sémantique, le stockage objet des justificatifs et un workflow durable pour les processus longs. Le LLM doit rester hors des calculs de paiement, d’autorisation et de conformité finale.
+Le registre interne et la découverte externe multirequête sont maintenant réels et traçables. Ajouter ensuite pgvector pour le rappel sémantique, le stockage objet des justificatifs et un workflow durable pour les processus longs. Le LLM doit rester hors des calculs de paiement, d’autorisation et de conformité finale.
 
 ## Déploiement continu
 

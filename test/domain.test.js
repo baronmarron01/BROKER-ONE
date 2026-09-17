@@ -4,6 +4,7 @@ import { classifyRequest, rankCandidates, scoreCandidate, validateRequest } from
 import { handleCors } from '../lib/http.js';
 import { buildSearchQuery } from '../api/search.js';
 import { publicSourcePolicies, sourcePolicy } from '../lib/source-policy.js';
+import { mergeExternalCandidates, normalizeExternalIdentity, planDiscoveryQueries } from '../lib/external-sources.js';
 
 const request = { description: 'Machine commerciale pour emballage alimentaire', category: 'industrial', min_budget: 5000, max_budget: 10000, currency: 'CAD', location: 'Montréal', requires_physical_presence: false, requires_inspection: false, requires_installation: false, requires_licensed_professional: false, regulated_override: null };
 
@@ -46,4 +47,24 @@ test('publishes machine-readable rights for every enabled external source', () =
   }
   assert.equal(sourcePolicy('gleif').licence, 'CC0-1.0');
   assert.equal(sourcePolicy('unknown'), null);
+});
+
+test('plans bounded bilingual discovery queries', () => {
+  const queries = planDiscoveryQueries({ ...request, location:'Montréal' });
+  assert.ok(queries.length >= 4 && queries.length <= 6);
+  assert.ok(queries.some(query => /packaging|food/.test(query)));
+  assert.ok(queries.every(query => query.includes('Montréal')));
+});
+
+test('normalizes legal suffixes and accents for deduplication', () => {
+  assert.equal(normalizeExternalIdentity('Équipement Démo Inc.', 'Montréal, Québec'), normalizeExternalIdentity('Equipement Demo Ltd', 'Montreal Quebec'));
+});
+
+test('merges duplicate candidates while preserving distinct source evidence', () => {
+  const base = { provider_id:'external:wikidata:Q1', external:true, name:'Démo Inc.', service_zones:['Montréal, Québec'], semantic_score:0.4, lexical_score:0.4, reliability_score:0.4, provenance:{ source_count:1, sources:[{source_id:'wikidata',evidence:{matched_query:'demo'}}] } };
+  const other = structuredClone(base); other.provider_id='external:gleif:L1'; other.name='Demo Ltd'; other.semantic_score=0.7; other.provenance.sources=[{source_id:'gleif',evidence:{matched_query:'demo'}}];
+  const merged = mergeExternalCandidates([base, other]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].provenance.source_count, 2);
+  assert.equal(merged[0].semantic_score, 0.7);
 });

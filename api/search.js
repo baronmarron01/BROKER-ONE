@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       searchRegistry(validation.value, limit),
       externalRequested
         ? discoverExternal(validation.value, { limit:Math.min(15, limit), sources:Array.isArray(body.sources) ? body.sources : undefined })
-        : Promise.resolve({ candidates:[], connectors:[], cached:false })
+        : Promise.resolve({ candidates:[], queries:[], connectors:[], cached:false })
     ]);
     const { rows, query, fallback } = registry;
     const internalCandidates = rows.map(row => {
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
       candidates,
       search:{ connector:externalRequested?'hybrid_registry':'internal_registry', query, fallback, result_count:candidates.length,
         internal_count:internalCandidates.length, external_count:external.candidates.length, external_cached:external.cached,
-        connectors:external.connectors, duration_ms:Date.now()-started },
+        discovery_queries:external.queries, connectors:external.connectors, duration_ms:Date.now()-started },
       source_policies: publicSourcePolicies(),
       trace_id: context.id
     });
