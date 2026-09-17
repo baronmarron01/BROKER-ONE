@@ -1,0 +1,3 @@
+create index external_verification_cases_reviewer_idx on public.external_verification_cases(reviewer_user_id);
+create index external_verification_cases_promoted_provider_idx on public.external_verification_cases(promoted_provider_id);
+create index external_verification_events_actor_idx on public.external_verification_events(actor_user_id);

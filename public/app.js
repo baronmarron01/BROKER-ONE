@@ -1,4 +1,4 @@
-import { currentUser, getSession, refreshSession, signIn, signOut, signUp, table } from './db.js';
+import { currentUser, getSession, refreshSession, rpc, signIn, signOut, signUp, table } from './db.js';
 
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -146,7 +146,38 @@ $('providerForm').addEventListener('submit',async event=>{ event.preventDefault(
 
 $('providerInbox').addEventListener('click',async event=>{ const button=event.target.closest('.respond-quote');if(!button)return;const amount=prompt('Montant du devis en CAD (ex. 12500)');if(!amount)return;const terms=prompt('Conditions principales du devis')||'';try{const q=await table('quotes',{method:'POST',body:{quote_request_id:button.dataset.id,provider_id:button.dataset.provider,amount_minor:Math.round(Number(amount)*100),currency:'CAD',terms,status:'submitted'}});await table('quote_requests',{method:'PATCH',filters:`?id=eq.${button.dataset.id}`,body:{status:'accepted'}});await audit('quote.submitted','quote',q?.[0]?.id,{quote_request_id:button.dataset.id});await loadProviderWorkspace();}catch(error){alert(error.message);} });
 
-async function loadAdmin(){ if(jwtPayload()?.app_metadata?.role!=='admin')return; const names=['profiles','providers','requests','quote_requests','quotes','messages','audit_events']; const values=await Promise.all(names.map(n=>table(n,{select:'*',limit:1000}))); $('adminStats').innerHTML=names.map((n,i)=>`<article><strong>${values[i].length}</strong><span>${escapeHtml(n)}</span></article>`).join(''); }
+function splitList(value){ return value.split(',').map(item=>item.trim()).filter(Boolean); }
+
+async function loadAdmin(){
+  if(jwtPayload()?.app_metadata?.role!=='admin')return;
+  $('verificationQueue').innerHTML='<p class="list-empty">Chargement de la file sécurisée…</p>';
+  try {
+    const names=['profiles','providers','requests','quote_requests','quotes','messages','audit_events'];
+    const [values,externalResults,cases]=await Promise.all([
+      Promise.all(names.map(name=>table(name,{select:'*',limit:1000}))),
+      table('external_search_results',{select:'id,display_name,source_id,score,verification_status,provenance_snapshot,created_at',order:'created_at.desc',limit:50}),
+      table('external_verification_cases',{select:'id,external_result_id,status,decision_reason,promoted_provider_id,decided_at',order:'updated_at.desc',limit:100})
+    ]);
+    $('adminStats').innerHTML=names.map((name,index)=>`<article><strong>${values[index].length}</strong><span>${escapeHtml(name)}</span></article>`).join('');
+    const caseByResult=new Map(cases.map(item=>[item.external_result_id,item]));
+    $('verificationQueue').innerHTML=externalResults.map(candidate=>{
+      const verification=caseByResult.get(candidate.id); const status=verification?.status||candidate.verification_status; const locked=status==='approved'; const sources=candidate.provenance_snapshot?.sources||[];
+      return `<article class="verification-card" data-id="${candidate.id}"><div class="verification-summary"><div><span class="badge ${status==='rejected'?'danger':''}">${escapeHtml(status)}</span><h4>${escapeHtml(candidate.display_name)}</h4><p>${escapeHtml(candidate.source_id.toUpperCase())} · Score ${Math.round(Number(candidate.score)*100)}% · ${sources.length} preuve(s)</p></div><span>${new Date(candidate.created_at).toLocaleString('fr-CA')}</span></div><div class="verification-fields"><label>Nom vérifié<input class="review-name" value="${escapeHtml(candidate.display_name)}" maxlength="160" ${locked?'disabled':''}></label><label>Site officiel<input class="review-website" type="url" placeholder="https://" ${locked?'disabled':''}></label><label>Catégories<input class="review-categories" value="industrial" ${locked?'disabled':''}></label><label>Zones desservies<input class="review-zones" value="Québec" ${locked?'disabled':''}></label></div><label>Motif documenté<textarea class="review-reason" minlength="10" maxlength="2000" placeholder="Décrivez les vérifications effectuées et la justification de la décision." ${locked?'disabled':''}>${escapeHtml(verification?.decision_reason||'')}</textarea></label><div class="evidence">${sources.map(source=>`<span>${escapeHtml(source.label||source.source_id||'source')} · ${escapeHtml(source.evidence?.matched_query||'preuve enregistrée')}</span>`).join('')||'<span>Preuve enregistrée dans le snapshot immuable</span>'}</div>${locked?`<p class="notice">Promu dans le registre · fournisseur ${escapeHtml(verification.promoted_provider_id||'créé')}</p>`:`<div class="verification-actions"><button class="mini review-action" data-decision="approved">Approuver et promouvoir</button><button class="mini danger review-action" data-decision="rejected">Rejeter</button></div>`}</article>`;
+    }).join('')||'<p class="list-empty">Aucun candidat externe enregistré. Effectuez une recherche connectée pour alimenter la file.</p>';
+  } catch(error){ $('verificationQueue').innerHTML=`<p class="list-empty">${escapeHtml(error.message)}</p>`; }
+}
+
+$('refreshAdmin').addEventListener('click',loadAdmin);
+$('verificationQueue').addEventListener('click',async event=>{
+  const button=event.target.closest('.review-action'); if(!button)return;
+  const card=button.closest('.verification-card'); const reason=card.querySelector('.review-reason').value.trim();
+  if(reason.length<10){ alert('Ajoutez un motif de vérification d’au moins 10 caractères.'); return; }
+  button.disabled=true;
+  try {
+    await rpc('review_external_candidate',{candidate_result_id:card.dataset.id,decision:button.dataset.decision,reason,reviewed_business_name:card.querySelector('.review-name').value.trim(),reviewed_categories:splitList(card.querySelector('.review-categories').value),reviewed_service_zones:splitList(card.querySelector('.review-zones').value),reviewed_website:card.querySelector('.review-website').value.trim()||null});
+    await Promise.all([loadAdmin(),loadDirectory()]);
+  } catch(error){ alert(error.message); button.disabled=false; }
+});
 
 document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab)); document.querySelectorAll('.workspace-view').forEach(x=>x.hidden=x.id!==`${tab.dataset.view}View`); if(tab.dataset.view==='providers')loadDirectory(); if(tab.dataset.view==='admin')loadAdmin(); }));
 

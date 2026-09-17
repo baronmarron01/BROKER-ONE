@@ -60,4 +60,8 @@ export async function table(name, { select = '*', filters = '', order = '', limi
   return single && Array.isArray(rows) ? rows[0] : rows;
 }
 
+export async function rpc(name, body = {}) {
+  return request(`/rest/v1/rpc/${encodeURIComponent(name)}`, { method:'POST', body });
+}
+
 export const currentUser = () => getSession()?.user || null;

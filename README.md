@@ -1,4 +1,4 @@
-# BROKER-ONE MVP v2.5
+# BROKER-ONE MVP v2.6
 
 MVP fonctionnel de courtage B2B assisté. Cette reconstruction transforme le proxy OpenAI initial en une application testable avec interface, classification de risque, matching explicable et assistant IA borné.
 
@@ -21,6 +21,7 @@ MVP fonctionnel de courtage B2B assisté. Cette reconstruction transforme le pro
 - Historique des exécutions de recherche et snapshots de preuves par résultat.
 - Découverte externe hybride sans clé via GLEIF et Wikidata, avec requêtes bilingues planifiées, timeout par requête, cache court, fusion des preuves, déduplication et échec partiel toléré.
 - Registre machine-readable des licences et droits; les candidats externes restent non vérifiés et non contactables avant validation.
+- File de vérification humaine réservée aux administrateurs, décisions motivées, preuves immuables et promotion atomique vers le registre.
 - Registre initial de fournisseurs de démonstration; aucun achat ou paiement réel.
 
 ## Démarrage

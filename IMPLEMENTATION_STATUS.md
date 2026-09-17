@@ -9,6 +9,7 @@
 | Recherche registre réelle | Implémenté | FTS français, GIN, filtres, `/api/search` |
 | Provenance de recherche | Implémenté | `provider_sources`, `search_runs`, `search_results` |
 | Découverte externe | Implémenté | GLEIF + Wikidata, planification bilingue, fusion des preuves, licences exposées, cache, timeout et dégradation contrôlée |
+| Vérification externe | Implémenté | File admin, décision motivée, événements append-only et promotion atomique |
 | Overture Places | Architecture/licence préparée | Ingestion en lot à brancher sur stockage persistant |
 | Assistant IA | Implémenté, activation par clé | `api/ai.js` |
 | Authentification | Implémenté | Supabase Auth, profils et sessions |
@@ -17,7 +18,7 @@
 | Devis | Implémenté | Demandes, réponses et statuts |
 | Communications | Schéma implémenté | Conversations, messages et notifications; UI de messagerie à enrichir |
 | Historique et audit | Implémenté | Demandes persistantes et `audit_events` |
-| Console admin | Implémenté partiellement | Statistiques RLS; attribution initiale du rôle par opérateur Supabase |
+| Console admin | Implémenté | Statistiques RLS et workflow de vérification des candidats externes |
 | Paiement / escrow | Bloqué | Validation juridique et partenaire requis |
 | KYC/KYB | Bloqué | Compte fournisseur et politique requise |
 | Tests domaine | Implémenté | `test/domain.test.js` |
