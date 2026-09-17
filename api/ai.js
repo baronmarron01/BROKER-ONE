@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   if (input.length < 5 || input.length > 12_000) return sendError(res, 422, 'INVALID_INPUT', 'input must contain 5 to 12000 characters.', context.id);
 
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+  const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
   if (!apiKey) return sendError(res, 503, 'AI_NOT_CONFIGURED', 'AI service is not configured. Deterministic endpoints remain available.', context.id);
 
   try {
