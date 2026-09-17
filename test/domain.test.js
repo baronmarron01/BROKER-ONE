@@ -53,7 +53,8 @@ test('plans bounded bilingual discovery queries', () => {
   const queries = planDiscoveryQueries({ ...request, location:'Montréal' });
   assert.ok(queries.length >= 4 && queries.length <= 6);
   assert.ok(queries.some(query => /packaging|food/.test(query)));
-  assert.ok(queries.every(query => query.includes('Montréal')));
+  assert.ok(queries.some(query => query.includes('Montréal')));
+  assert.ok(queries.some(query => !query.includes('Montréal')));
 });
 
 test('normalizes legal suffixes and accents for deduplication', () => {
