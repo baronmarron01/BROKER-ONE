@@ -95,3 +95,7 @@ Ce MVP ne prétend pas être la plateforme complète du document maître. Resten
 ## Architecture suivante recommandée
 
 Le registre interne dispose maintenant d’une recherche réelle et traçable. Ajouter ensuite un connecteur externe autorisé, pgvector pour le rappel sémantique, le stockage objet des justificatifs et un workflow durable pour les processus longs. Le LLM doit rester hors des calculs de paiement, d’autorisation et de conformité finale.
+
+## Déploiement continu
+
+La branche `main` est la source de production Vercel. Chaque commit validé déclenche automatiquement un nouveau déploiement.
