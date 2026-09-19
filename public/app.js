@@ -45,7 +45,7 @@ async function updateSessionUI() {
   $('sessionBadge').className=user ? 'badge':'badge muted';
   $('adminTab').hidden=jwtPayload()?.app_metadata?.role !== 'admin';
   if (user) await Promise.allSettled([loadHistory(),loadQuotes(),loadProviderWorkspace()]);
-  else { $('historyContent').textContent='Connectez-vous pour enregistrer et retrouver vos demandes.'; $('quotesContent').textContent='Connectez-vous pour gérer vos devis.'; }
+  else { $('adminView').hidden=true; $('verificationQueue').replaceChildren(); $('adminStats').replaceChildren(); $('providerInbox').replaceChildren(); $('providerForm').reset(); $('historyContent').textContent='Connectez-vous pour enregistrer et retrouver vos demandes.'; $('quotesContent').textContent='Connectez-vous pour gérer vos devis.'; }
 }
 
 function openAuth() { $('authDialog').showModal(); }
@@ -72,7 +72,7 @@ $('authForm').addEventListener('submit',async event=>{
 });
 
 $('requestForm').addEventListener('submit', async event => {
-  event.preventDefault(); const button=event.submitter; button.disabled=true;
+  event.preventDefault(); const button=event.submitter || $('requestForm').querySelector('button[type=submit]'); if(button) button.disabled=true; currentRequestId=null; $('matchesPanel').hidden=true;
   try {
     currentRequest=requestFromForm(); const data=await api('/api/classify',currentRequest);
     $('emptyState').hidden=true; $('classification').hidden=false;
@@ -83,18 +83,18 @@ $('requestForm').addEventListener('submit', async event => {
       const saved=await table('requests',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,title:currentRequest.description.slice(0,90),description:currentRequest.description,category:currentRequest.category,location:currentRequest.location,min_budget_minor:Math.round(currentRequest.min_budget*100),max_budget_minor:Math.round(currentRequest.max_budget*100),currency:currentRequest.currency,constraints:{physical:currentRequest.requires_physical_presence,inspection:currentRequest.requires_inspection,installation:currentRequest.requires_installation,licensed:currentRequest.requires_licensed_professional},risk_axes:data.classification.risk_axes,approval_gates:data.classification.approval_gates,pipeline_class:data.classification.pipeline_class,processing_mode:data.classification.processing_mode,status:'classified'}});
       currentRequestId=saved?.id; await audit('request.classified','request',currentRequestId,{trace_id:data.trace_id}); await loadHistory();
     }
-  } catch(error){ alert(error.message); } finally{ button.disabled=false; }
+  } catch(error){ alert(error.message); } finally{ if(button) button.disabled=false; }
 });
 
 $('matchBtn').addEventListener('click',async()=>{
   const button=$('matchBtn'); button.disabled=true; button.firstChild.textContent='Recherche en cours… ';
   try {
-    const searchData=await api('/api/search',{request:currentRequest,limit:20,include_external:true});
+    const searchData=await api('/api/search',{request:currentRequest,limit:20,include_external:false});
     const candidates=searchData.candidates;
-    if(!candidates.length) throw new Error('Aucun fournisseur vérifié ne correspond aux filtres actuels.');
+    if(!candidates.length){$('matchesPanel').hidden=false;$('searchBadge').textContent='Aucun fournisseur qualifié';$('matches').textContent='Aucun fournisseur qualifié dans le registre pour ce besoin. Utilisez la recherche web ci-dessous pour identifier des entreprises à qualifier.';$('matchesPanel').scrollIntoView({behavior:'smooth'});return;}
     const data=await api('/api/match',{request:currentRequest,candidates}); $('matchesPanel').hidden=false;
     $('searchBadge').textContent=`${searchData.search.result_count} résultat(s) · ${searchData.search.internal_count} interne(s) · ${searchData.search.external_count} externe(s) · ${searchData.search.duration_ms} ms${searchData.search.fallback?' · rappel élargi':''}`;
-    $('matches').innerHTML=data.matches.map(item=>{const source=candidates.find(x=>x.provider_id===item.provider_id);const evidence=source?.provenance;const external=Boolean(source?.external);return `<article class="match"><div class="rank">${String(item.rank).padStart(2,'0')}</div><div><h3>${escapeHtml(item.name)}${item.eligible?'':' · EXCLU'}</h3><p>${escapeHtml(item.explanation)} Confiance: ${Math.round(item.confidence*100)}%.</p><div class="evidence"><span>${external?'Candidat externe non vérifié':'Fournisseur vérifié'}</span><span>${Number(evidence?.source_count||0)} source(s)</span><span>Licence: ${escapeHtml(evidence?.licence||'interne')}</span><span>Vérification: ${evidence?.latest_checked_at?new Date(evidence.latest_checked_at).toLocaleDateString('fr-CA'):'non datée'}</span></div>${external?'<span class="badge muted">Validation requise avant contact</span>':currentUser()&&currentRequestId&&item.eligible?`<button class="mini quote-action" data-provider="${escapeHtml(item.provider_id)}">Demander un devis</button>`:''}</div><div class="score"><strong>${Math.round(item.score*100)}</strong><span>SCORE / 100</span></div></article>`}).join('');
+    $('matches').innerHTML=data.matches.map(item=>{const source=candidates.find(x=>x.provider_id===item.provider_id);const evidence=source?.provenance;const external=Boolean(source?.external);return `<article class="match"><div class="rank">${String(item.rank).padStart(2,'0')}</div><div><h3>${escapeHtml(item.name)}${item.eligible?'':' · EXCLU'}</h3><p>${escapeHtml(item.explanation)} ${item.confidence == null ? 'Confiance non établie : historique insuffisant.' : `Confiance indicative : ${Math.round(item.confidence*100)}%.`}</p><div class="evidence"><span>${external?'Candidat externe non vérifié':'Fournisseur vérifié'}</span><span>${Number(evidence?.source_count||0)} source(s)</span><span>Licence: ${escapeHtml(evidence?.licence||'interne')}</span><span>Vérification: ${evidence?.latest_checked_at?new Date(evidence.latest_checked_at).toLocaleDateString('fr-CA'):'non datée'}</span></div>${external?'<span class="badge muted">Validation requise avant contact</span>':currentUser()&&currentRequestId&&item.eligible?`<button class="mini quote-action" data-provider="${escapeHtml(item.provider_id)}">Demander un devis</button>`:''}</div><div class="score"><strong>${Math.round(item.score*100)}</strong><span>SCORE / 100</span></div></article>`}).join('');
     if(currentUser()&&currentRequestId) {
       const run=await table('search_runs',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,request_id:currentRequestId,query_text:searchData.search.query||currentRequest.description,filters:{category:currentRequest.category,location:currentRequest.location,min_budget:currentRequest.min_budget,max_budget:currentRequest.max_budget},connector:searchData.search.connector,result_count:candidates.length,duration_ms:searchData.search.duration_ms}});
       for(const [index,candidate] of candidates.entries()) {
@@ -103,7 +103,7 @@ $('matchBtn').addEventListener('click',async()=>{
           await table('external_search_results',{method:'POST',body:{search_run_id:run.id,buyer_user_id:currentUser().id,external_key:candidate.provider_id,source_id:sourceId,display_name:candidate.name,position:index+1,score:candidate.semantic_score,verification_status:'unverified_candidate',provenance_snapshot:candidate.provenance||{}}}).catch(()=>{});
         } else await table('search_results',{method:'POST',body:{search_run_id:run.id,buyer_user_id:currentUser().id,provider_id:candidate.provider_id,position:index+1,lexical_score:candidate.lexical_score,filter_score:(candidate.location_score+candidate.constraint_score)/2,provenance_snapshot:candidate.provenance||{}}}).catch(()=>{});
       }
-      for(const item of data.matches) if(!String(item.provider_id).startsWith('external:')) await table('matches',{method:'POST',body:{request_id:currentRequestId,provider_id:item.provider_id,rank:item.rank,score:item.score,confidence:item.confidence,eligible:item.eligible,explanation:item.explanation,score_breakdown:item.subscores || {}}}).catch(()=>{});
+      for(const item of data.matches) if(!String(item.provider_id).startsWith('external:')) await table('matches',{method:'POST',body:{request_id:currentRequestId,provider_id:item.provider_id,rank:item.rank,score:item.score,confidence:item.confidence ?? 0,eligible:item.eligible,explanation:item.explanation,score_breakdown:item.subscores || {}}}).catch(()=>{});
       await audit('search.completed','search_run',run.id,{connector:searchData.search.connector,count:candidates.length,fallback:searchData.search.fallback});
       await audit('matching.completed','request',currentRequestId,{count:data.matches.length,search_run_id:run.id});
     }
@@ -114,26 +114,26 @@ $('matchBtn').addEventListener('click',async()=>{
 
 $('matches').addEventListener('click',async event=>{
   const button=event.target.closest('.quote-action'); if(!button)return; button.disabled=true;
-  try { const rows=await table('quote_requests',{method:'POST',body:{request_id:currentRequestId,provider_id:button.dataset.provider,buyer_user_id:currentUser().id,message:'Merci de soumettre un devis détaillé pour cette demande.'}}); const quoteRequest=rows?.[0]; await table('conversations',{method:'POST',body:{request_id:currentRequestId,provider_id:button.dataset.provider,buyer_user_id:currentUser().id}}).catch(()=>{}); await audit('quote.requested','quote_request',quoteRequest?.id,{provider_id:button.dataset.provider}); button.textContent='Devis demandé'; await loadQuotes(); }
+  try { const recipients=await table('providers',{select:'id,owner_user_id,verification_status,active',filters:`&id=eq.${button.dataset.provider}`,limit:1}); if(!recipients[0]?.owner_user_id || recipients[0].verification_status!=='verified' || !recipients[0].active)throw new Error('Ce fournisseur ne dispose pas d’un compte destinataire qualifié. Préparez un brouillon de devis.'); const rows=await table('quote_requests',{method:'POST',body:{request_id:currentRequestId,provider_id:button.dataset.provider,buyer_user_id:currentUser().id,message:'Merci de soumettre un devis détaillé pour cette demande.'}}); const quoteRequest=rows?.[0]; await table('conversations',{method:'POST',body:{request_id:currentRequestId,provider_id:button.dataset.provider,buyer_user_id:currentUser().id}}).catch(()=>{}); await audit('quote.requested','quote_request',quoteRequest?.id,{provider_id:button.dataset.provider}); button.textContent='Demande enregistrée dans le portail'; await loadQuotes(); }
   catch(error){ alert(error.message.includes('duplicate')?'Un devis a déjà été demandé à ce fournisseur.':error.message); button.disabled=false; }
 });
 
 $('clarifyBtn').addEventListener('click',async()=>{ $('aiDialog').showModal(); $('aiOutput').textContent='Analyse de la demande…'; try{const data=await api('/api/ai',{task:'clarify_request',input:$('description').value,locale:'fr'});$('aiOutput').textContent=data.content||'Aucune question générée.';}catch(error){$('aiOutput').textContent=error.message+(error.code==='AI_NOT_CONFIGURED'?'\n\nOPENAI_API_KEY doit être configurée côté serveur.':'');} });
 
 async function loadDirectory(){
-  try { directory=await table('providers',{select:'id,business_name,description,categories,service_zones,website,verification_status,reliability_score',filters:'&active=eq.true',order:'reliability_score.desc'}); $('providerDirectory').innerHTML=directory.map(p=>`<article class="directory-card"><div><span class="badge">${escapeHtml(p.verification_status)}</span><h3>${escapeHtml(p.business_name)}</h3></div><p>${escapeHtml(p.description)}</p><div class="chips">${(p.categories||[]).map(x=>`<span class="chip">${escapeHtml(x)}</span>`).join('')}</div><small>Fiabilité ${Math.round(p.reliability_score*100)}% · ${(p.service_zones||[]).map(escapeHtml).join(', ')}</small></article>`).join('')||'<p class="list-empty">Aucun fournisseur vérifié.</p>'; }
+  try { directory=await table('providers',{select:'id,business_name,description,categories,service_zones,website,verification_status,reliability_score',filters:'&active=eq.true&owner_user_id=not.is.null',order:'reliability_score.desc'}); $('providerDirectory').innerHTML=directory.map(p=>`<article class="directory-card"><div><span class="badge">${escapeHtml(p.verification_status)}</span><h3>${escapeHtml(p.business_name)}</h3></div><p>${escapeHtml(p.description)}</p><div class="chips">${(p.categories||[]).map(x=>`<span class="chip">${escapeHtml(x)}</span>`).join('')}</div><small>Fiabilité ${Math.round(p.reliability_score*100)}% · ${(p.service_zones||[]).map(escapeHtml).join(', ')}</small></article>`).join('')||'<p class="list-empty">Aucun fournisseur vérifié.</p>'; }
   catch(error){ $('providerDirectory').textContent=error.message; }
 }
 
 async function loadHistory(){
-  if(!currentUser())return; const [requests,auditRows]=await Promise.all([table('requests',{order:'created_at.desc',limit:30}),table('audit_events',{order:'created_at.desc',limit:30})]);
-  $('historyContent').innerHTML=`<div class="data-list"><h3>Demandes</h3>${requests.map(r=>`<article><b>${escapeHtml(r.title||r.description)}</b><span>Classe ${escapeHtml(r.pipeline_class||'—')} · ${escapeHtml(r.status)} · ${new Date(r.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucune demande enregistrée.</p>'}</div><div class="data-list"><h3>Journal d’audit</h3>${auditRows.map(a=>`<article><b>${escapeHtml(a.action)}</b><span>${escapeHtml(a.entity_type)} · ${new Date(a.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucun événement.</p>'}</div>`;
+  if(!currentUser())return; const [requests,auditRows,drafts]=await Promise.all([table('requests',{order:'created_at.desc',limit:30}),table('audit_events',{order:'created_at.desc',limit:30}),table('inquiry_drafts',{order:'created_at.desc',limit:30})]);
+  $('historyContent').innerHTML=`<div class="data-list"><h3>Demandes</h3>${drafts.map(d=>`<article><b>Brouillon de demande — aucun envoi</b><details><summary>Lire le texte</summary><pre>${escapeHtml(d.body)}</pre></details><span>${new Date(d.created_at).toLocaleString('fr-CA')}</span></article>`).join('')}${requests.map(r=>`<article><b>${escapeHtml(r.title||r.description)}</b><span>Classe ${escapeHtml(r.pipeline_class||'—')} · ${escapeHtml(r.status)} · ${new Date(r.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucune demande enregistrée.</p>'}</div><div class="data-list"><h3>Journal d’audit</h3>${auditRows.map(a=>`<article><b>${escapeHtml(a.action)}</b><span>${escapeHtml(a.entity_type)} · ${new Date(a.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucun événement.</p>'}</div>`;
 }
 $('refreshHistory').addEventListener('click',loadHistory);
 
 async function loadQuotes(){
   if(!currentUser())return; const rows=await table('quote_requests',{select:'id,status,message,created_at,provider_id,request_id,providers(business_name),requests(title),quotes(id,amount_minor,currency,status,terms,valid_until)',order:'created_at.desc'});
-  $('quotesContent').innerHTML=`<div class="data-list">${rows.map(q=>`<article><b>${escapeHtml(q.providers?.business_name||'Fournisseur')} — ${escapeHtml(q.requests?.title||'Demande')}</b><span>Statut: ${escapeHtml(q.status)} · ${q.quotes?.[0]?money(q.quotes[0].amount_minor,q.quotes[0].currency):'En attente du devis'}</span></article>`).join('')||'<p>Aucune demande de devis.</p>'}</div>`;
+  $('quotesContent').innerHTML=`<div class="data-list">${rows.map(q=>`<article><b>${escapeHtml(q.providers?.business_name||'Fournisseur')} — ${escapeHtml(q.requests?.title||'Demande')}</b><span>Statut: ${escapeHtml(q.status)} · ${q.quotes?.[0]?money(q.quotes[0].amount_minor,q.quotes[0].currency):'En attente du devis'}</span>${(q.quotes || []).map(offer=>`<p>Offre : ${escapeHtml(offer.status)} · Validité : ${escapeHtml(offer.valid_until || 'non précisée')}</p><p>${escapeHtml(offer.terms || 'Conditions non précisées')}</p>`).join('')}</article>`).join('')||'<p>Aucune demande de devis.</p>'}</div>`;
 }
 
 async function loadProviderWorkspace(){
@@ -144,7 +144,7 @@ async function loadProviderWorkspace(){
 
 $('providerForm').addEventListener('submit',async event=>{ event.preventDefault(); if(!currentUser()){openAuth();return;} const body={owner_user_id:currentUser().id,business_name:$('providerName').value.trim(),website:$('providerWebsite').value||null,description:$('providerDescription').value.trim(),categories:$('providerCategories').value.split(',').map(x=>x.trim()).filter(Boolean),service_zones:$('providerZones').value.split(',').map(x=>x.trim()).filter(Boolean)}; const owned=await table('providers',{filters:`&owner_user_id=eq.${currentUser().id}`,limit:1}); const result=owned[0]?await table('providers',{method:'PATCH',filters:`?id=eq.${owned[0].id}`,body}):await table('providers',{method:'POST',body}); const id=result?.[0]?.id||owned[0]?.id; await audit(owned[0]?'provider.updated':'provider.created','provider',id); alert('Profil fournisseur enregistré.'); await loadProviderWorkspace(); });
 
-$('providerInbox').addEventListener('click',async event=>{ const button=event.target.closest('.respond-quote');if(!button)return;const amount=prompt('Montant du devis en CAD (ex. 12500)');if(!amount)return;const terms=prompt('Conditions principales du devis')||'';try{const q=await table('quotes',{method:'POST',body:{quote_request_id:button.dataset.id,provider_id:button.dataset.provider,amount_minor:Math.round(Number(amount)*100),currency:'CAD',terms,status:'submitted'}});await table('quote_requests',{method:'PATCH',filters:`?id=eq.${button.dataset.id}`,body:{status:'accepted'}});await audit('quote.submitted','quote',q?.[0]?.id,{quote_request_id:button.dataset.id});await loadProviderWorkspace();}catch(error){alert(error.message);} });
+$('providerInbox').addEventListener('click',async event=>{ const button=event.target.closest('.respond-quote');if(!button)return;const amount=prompt('Montant du devis en CAD (ex. 12500)');if(!amount)return;if(!Number.isFinite(Number(amount)) || Number(amount)<=0){alert('Saisissez un montant positif.');return;}const terms=prompt('Conditions principales du devis')||'';try{const q=await table('quotes',{method:'POST',body:{quote_request_id:button.dataset.id,provider_id:button.dataset.provider,amount_minor:Math.round(Number(amount)*100),currency:'CAD',terms,status:'submitted'}});await audit('quote.submitted','quote',q?.[0]?.id,{quote_request_id:button.dataset.id});await loadProviderWorkspace();}catch(error){alert(error.message);} });
 
 function splitList(value){ return value.split(',').map(item=>item.trim()).filter(Boolean); }
 
@@ -183,3 +183,59 @@ document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>
 
 await refreshSession();
 await Promise.all([health(),loadDirectory(),updateSessionUI()]);
+
+// A changed need invalidates its previous classification and supplier ranking.
+function invalidateRequest() {
+  currentRequest=null; currentRequestId=null;
+  $('classification').hidden=true; $('emptyState').hidden=false; $('matchesPanel').hidden=true;
+}
+$('requestForm').addEventListener('input',invalidateRequest);
+$('applyClarifications').addEventListener('click',()=>{
+  const answers=$('clarificationAnswers').value.trim();
+  if(!answers){$('clarificationStatus').textContent='Ajoutez vos réponses avant de continuer.';return;}
+  const description=$('description').value.trim()+'\n\nPrécisions fournies :\n'+answers;
+  if(description.length>4000){$('clarificationStatus').textContent='La demande complète doit rester sous 4 000 caractères. Raccourcissez vos réponses.';return;}
+  $('description').value=description; $('clarificationAnswers').value='';
+  invalidateRequest(); $('aiDialog').close(); $('description').focus();
+  $('emptyState').textContent='Précisions intégrées. Cliquez sur Analyser et classer pour actualiser la décision.';
+});
+$('discoverBtn').addEventListener('click',async()=>{
+  const button=$('discoverBtn');button.disabled=true;
+  $('discoveryOutput').textContent='Recherche de sites d’entreprises…';
+  try {
+    const request=requestFromForm();
+    if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
+    const data=await api('/api/ai',{task:'discover_suppliers',input:JSON.stringify(request),locale:'fr'});
+    const result=document.createElement('p');
+    let offset=0;
+    for(const citation of (data.annotations || []).sort((a,b)=>a.start_index-b.start_index)){
+      if(citation.start_index<offset || citation.end_index>data.content.length)continue;
+      result.append(document.createTextNode(data.content.slice(offset,citation.start_index)));
+      const a=document.createElement('a');a.href=citation.url;a.textContent=data.content.slice(citation.start_index,citation.end_index)||'[Source]';a.target='_blank';a.rel='noopener noreferrer';result.append(a);offset=citation.end_index;
+    }
+    result.append(document.createTextNode(data.content.slice(offset)));
+    $('discoveryOutput').replaceChildren(result);
+    const label=document.createElement('p');label.textContent='Sources consultées — '+new Date(data.checked_at).toLocaleString('fr-CA');$('discoveryOutput').append(label);
+    for(const citation of data.citations){const p=document.createElement('p');const a=document.createElement('a');a.href=citation.url;a.textContent=citation.title;a.target='_blank';a.rel='noopener noreferrer';p.append(a);$('discoveryOutput').append(p);}
+  } catch(error){$('discoveryOutput').textContent=error.message;}
+  finally{button.disabled=false;}
+});
+$('draftInquiryBtn').addEventListener('click',()=>{
+  const r=requestFromForm();
+  $('inquiryDraft').value=`Objet : Demande de devis — ${r.description.slice(0,80)}\n\nBonjour,\n\nVoici notre besoin :\n${r.description}\n\nLieu : ${r.location || 'à préciser'}\nBudget indicatif : ${r.min_budget} à ${r.max_budget} ${r.currency} (à confirmer).\n\nMerci de confirmer :\n- votre capacité à répondre et les caractéristiques proposées ;\n- le prix détaillé, les taxes, le transport et l’installation ;\n- la disponibilité et le délai ;\n- les garanties, conditions de paiement et durée de validité ;\n- les preuves des certifications requises, le cas échéant.\n\nCoordonnées du demandeur : [à compléter]\n\nCette demande ne constitue pas une commande ni un engagement.\n`;
+  $('inquiryDraft').focus();
+});
+$('downloadInquiryBtn').addEventListener('click',()=>{
+  if(!$('inquiryDraft').value.trim()){alert('Préparez le texte du devis avant de le télécharger.');return;}
+  const url=URL.createObjectURL(new Blob([$('inquiryDraft').value],{type:'text/plain;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='broker-one-demande-devis-brouillon.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+
+$('saveInquiryBtn').addEventListener('click',async()=>{
+  if(!currentUser()){openAuth();return;}
+  const body=$('inquiryDraft').value.trim();if(!body){$('inquiryStatus').textContent='Préparez un brouillon avant de l’enregistrer.';return;}
+  $('saveInquiryBtn').disabled=true;
+  try{await table('inquiry_drafts',{method:'POST',body:{buyer_user_id:currentUser().id,body}});$('inquiryStatus').textContent='Brouillon enregistré dans votre historique. Aucun envoi effectué.';await loadHistory();}
+  catch(error){$('inquiryStatus').textContent='Enregistrement impossible : '+error.message;}
+  finally{$('saveInquiryBtn').disabled=false;}
+});

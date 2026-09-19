@@ -80,3 +80,14 @@ test('merges duplicate candidates while preserving distinct source evidence', ()
   assert.equal(merged[0].provenance.source_count, 2);
   assert.equal(merged[0].semantic_score, 0.7);
 });
+
+
+test('regulated description cannot be downgraded by category or override',()=>{
+  const result=classifyRequest({description:'Je cherche des injections de botox médical',category:'industrial',regulated_override:false});
+  assert.equal(result.pipeline_class,'C');
+});
+test('missing transaction history does not produce a confidence percentage',()=>{
+  const result=scoreCandidate({min_budget:100,max_budget:200},{provider_id:'external:web:test',external:true,name:'Example',semantic_score:1});
+  assert.equal(result.confidence,null);
+  assert.equal(result.eligible,false);
+});
