@@ -64,7 +64,7 @@ export default async function handler(req, res) {
         : Promise.resolve({ candidates:[], queries:[], connectors:[], cached:false })
     ]);
     const { rows, query, fallback } = registry;
-    const internalCandidates = rows.map(row => {
+    const internalCandidates = rows.filter(row => !(row.provenance?.sources || []).some(source => source.label === 'Registre interne de démonstration')).map(row => {
       const min = row.estimated_min_price_minor == null ? null : Number(row.estimated_min_price_minor) / 100;
       const max = row.estimated_max_price_minor == null ? null : Number(row.estimated_max_price_minor) / 100;
       return {
@@ -80,9 +80,10 @@ export default async function handler(req, res) {
         location_score: row.location_match ? 1 : 0.55,
         total_price: min != null && max != null ? (min + max) / 2 : min ?? max,
         reliability_score: Number(row.reliability_score || 0),
-        total_transactions: Math.round(Number(row.reliability_score || 0) * 25),
-        successful_transactions: Math.round(Number(row.reliability_score || 0) * 23),
-        rating: 3.5 + Number(row.reliability_score || 0) * 1.5,
+        total_transactions: null,
+        successful_transactions: null,
+        rating: null,
+        history_status: 'unknown',
         provenance: row.provenance,
         estimated_price: { min, max, currency:row.currency }
       };

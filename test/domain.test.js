@@ -14,6 +14,17 @@ test('classifies simple digital request as A', () => assert.equal(classifyReques
 test('classifies installation request as B', () => assert.equal(classifyRequest({ ...request, requires_installation: true }).pipeline_class, 'B'));
 test('classifies regulated request as C', () => assert.equal(classifyRequest({ ...request, category: 'medical' }).pipeline_class, 'C'));
 test('excludes an ineligible candidate', () => assert.equal(scoreCandidate(request, { provider_id: 'x', eligible: false, semantic_score: 1, capability_score: 1 }).score, 0));
+test('external discoveries cannot become eligible through a client score', () => {
+  for (const candidate of [
+    {provider_id:'external:wikidata:Q18385922'},
+    {provider_id:'x',external:true},
+    {provider_id:'x',verification_status:'pending'}
+  ]) {
+    const result=scoreCandidate(request,{...candidate,eligible:true,semantic_score:1,capability_score:1,constraint_score:1});
+    assert.equal(result.eligible,false);
+    assert.equal(result.score,0);
+  }
+});
 test('ranks eligible candidates by score and gives new providers a prior', () => {
   const ranked = rankCandidates(request, [
     { provider_id: 'a', name: 'A', semantic_score: 0.9, capability_score: 0.9, total_price: 8000, location_score: 1, total_transactions: 0 },
