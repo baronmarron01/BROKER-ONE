@@ -30,6 +30,7 @@ Décrire son besoin, répondre aux questions utiles, obtenir des pistes d’entr
 | Classification navigateur | Besoin avec installation classé B |
 | Recherche registre navigateur | État explicite « Aucun fournisseur qualifié », sans résultats de démonstration |
 | Clarification navigateur | Réponse saisie intégrée dans la description ; ancien bouton de classement masqué |
+| Téléchargement du brouillon | Fonction présente ; deux attentes de téléchargement ont expiré dans le navigateur de test. Export non validé, texte consultable et copiable dans le formulaire |
 | Brouillon navigateur | Texte généré avec besoin, lieu, budget et informations à demander |
 | Devis Supabase | Dans une transaction annulée : acheteur de test → fournisseur de test → offre soumise → offre visible par l’acheteur ; réussi après correction RLS |
 | Confidentialité brouillons | Brouillon d’une identité synthétique invisible à une autre ; transaction annulée |
