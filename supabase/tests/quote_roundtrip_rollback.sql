@@ -1,0 +1,13 @@
+begin;
+select set_config('test.buyer',gen_random_uuid()::text,true),set_config('test.provider_user',gen_random_uuid()::text,true),set_config('test.provider',gen_random_uuid()::text,true),set_config('test.request',gen_random_uuid()::text,true),set_config('test.quote_request',gen_random_uuid()::text,true);
+insert into auth.users(id,email) values(current_setting('test.buyer')::uuid,'rollback-buyer@example.invalid'),(current_setting('test.provider_user')::uuid,'rollback-provider@example.invalid');
+insert into public.providers(id,owner_user_id,business_name,verification_status) values(current_setting('test.provider')::uuid,current_setting('test.provider_user')::uuid,'Rollback test supplier','verified');
+insert into public.requests(id,buyer_user_id,description,category) values(current_setting('test.request')::uuid,current_setting('test.buyer')::uuid,'Test transactional procurement','industrial');
+select set_config('request.jwt.claim.sub',current_setting('test.buyer'),true);
+set local role authenticated;
+insert into public.quote_requests(id,request_id,provider_id,buyer_user_id) values(current_setting('test.quote_request')::uuid,current_setting('test.request')::uuid,current_setting('test.provider')::uuid,auth.uid());
+select set_config('request.jwt.claim.sub',current_setting('test.provider_user'),true);
+insert into public.quotes(quote_request_id,provider_id,amount_minor,status,terms) values(current_setting('test.quote_request')::uuid,current_setting('test.provider')::uuid,125000,'submitted','Conditions de test');
+select set_config('request.jwt.claim.sub',current_setting('test.buyer'),true);
+select count(*)=1 as buyer_sees_received_quote from public.quotes where quote_request_id=current_setting('test.quote_request')::uuid;
+rollback;
