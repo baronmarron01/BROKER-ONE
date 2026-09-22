@@ -6,3 +6,5 @@
 pre{white-space:pre-wrap;overflow-wrap:anywhere}
 button:disabled{opacity:.55;cursor:wait}
 dialog{max-height:90vh;overflow-y:auto}
+
+.dossier-panel{margin-top:24px}.dossier-panel .two{margin-top:18px}.comparison-scroll{overflow-x:auto}.comparison-table{border-collapse:collapse;width:100%;font-size:13px;margin:20px 0}.comparison-table th,.comparison-table td{padding:12px;border:1px solid var(--line);text-align:left;vertical-align:top;min-width:110px}.comparison-table td:first-child{min-width:170px}.comparison-table td:last-child{min-width:240px;white-space:pre-wrap}.comparison-table caption{padding:12px;text-align:left;color:var(--muted)}.dossier-panel a{color:var(--cyan)}#dossierStatus{padding:12px;border-left:2px solid var(--cyan)}

@@ -43,7 +43,7 @@ const server = http.createServer(async (req, res) => {
       return api[path](req, adapter(res));
     }
     const file = path === '/' ? 'index.html' : path.replace(/^\//,'');
-    if (!['index.html','app.js','db.js','styles.css','workspace.css','search.css'].includes(file)) { res.statusCode=404; return res.end('Not found'); }
+    if (!['index.html','app.js','db.js','styles.css','workspace.css','search.css','dossiers.js','comparison.js'].includes(file)) { res.statusCode=404; return res.end('Not found'); }
     const data = await readFile(join(root,'public',file));
     res.setHeader('Content-Type',mime[extname(file)] || 'application/octet-stream');
     res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://qcymqanttwaoliksosui.supabase.co; frame-ancestors 'none'");

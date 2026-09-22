@@ -1,3 +1,4 @@
+import {mountDossiers} from './dossiers.js';
 import { currentUser, getSession, refreshSession, rpc, signIn, signOut, signUp, table } from './db.js';
 
 const $ = id => document.getElementById(id);
@@ -5,6 +6,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'
 const labels={regulatory:'Réglementaire',physical:'Physique',financial:'Financier',reversibility:'Réversibilité',low:'Faible',medium:'Modéré',high:'Élevé',before_provider_contact:'Avant contact fournisseur',before_contract:'Avant contrat',before_payment:'Avant paiement',compliance_review:'Contrôle de conformité'};
 const money = (minor, currency = 'CAD') => new Intl.NumberFormat('fr-CA',{style:'currency',currency}).format(Number(minor || 0) / 100);
 let currentRequest;
+let lastResearch=null;
 let currentRequestId;
 let directory = [];
 let authMode = 'signin';
@@ -40,6 +42,7 @@ async function audit(action, entityType, entityId, metadata = {}) {
 }
 
 async function updateSessionUI() {
+  document.dispatchEvent(new Event('broker-session-change'));
   const user = currentUser();
   $('accountBtn').hidden=!!user; $('logoutBtn').hidden=!user;
   $('sessionBadge').textContent=user ? user.email : 'Mode visiteur';
@@ -202,11 +205,12 @@ $('applyClarifications').addEventListener('click',()=>{
 });
 $('discoverBtn').addEventListener('click',async()=>{
   const button=$('discoverBtn');button.disabled=true;
-  $('discoveryOutput').textContent='Recherche de sites d’entreprises…';
+  lastResearch=null; $('discoveryOutput').textContent='Recherche de sites d’entreprises…';
   try {
     const request=requestFromForm();
     if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
     const data=await api('/api/ai',{task:'discover_suppliers',input:JSON.stringify(request),locale:'fr'});
+    lastResearch={request_key:JSON.stringify(request),content:data.content,citations:data.citations.map(c=>({...c,checked_at:data.checked_at})),checked_at:data.checked_at};
     const result=document.createElement('p');
     let offset=0;
     for(const citation of (data.annotations || []).sort((a,b)=>a.start_index-b.start_index)){
@@ -240,3 +244,6 @@ $('saveInquiryBtn').addEventListener('click',async()=>{
   catch(error){$('inquiryStatus').textContent='Enregistrement impossible : '+error.message;}
   finally{$('saveInquiryBtn').disabled=false;}
 });
+
+const loadDossiers=mountDossiers(requestFromForm,()=>lastResearch);
+await loadDossiers();

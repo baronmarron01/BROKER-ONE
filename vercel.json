@@ -7,21 +7,59 @@
     }
   },
   "rewrites": [
-    { "source": "/", "destination": "/public/index.html" },
-    { "source": "/app.js", "destination": "/public/app.js" },
-    { "source": "/db.js", "destination": "/public/db.js" },
-    { "source": "/styles.css", "destination": "/public/styles.css" }
-    ,{ "source": "/workspace.css", "destination": "/public/workspace.css" },
-    { "source": "/search.css", "destination": "/public/search.css" }
+    {
+      "source": "/",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/app.js",
+      "destination": "/public/app.js"
+    },
+    {
+      "source": "/db.js",
+      "destination": "/public/db.js"
+    },
+    {
+      "source": "/styles.css",
+      "destination": "/public/styles.css"
+    },
+    {
+      "source": "/workspace.css",
+      "destination": "/public/workspace.css"
+    },
+    {
+      "source": "/search.css",
+      "destination": "/public/search.css"
+    },
+    {
+      "source": "/dossiers.js",
+      "destination": "/public/dossiers.js"
+    },
+    {
+      "source": "/comparison.js",
+      "destination": "/public/comparison.js"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://qcymqanttwaoliksosui.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://qcymqanttwaoliksosui.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        }
       ]
     }
   ]

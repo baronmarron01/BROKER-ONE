@@ -1,3 +1,23 @@
+# Livraison v2.8 — 22 septembre 2026
+
+Cette livraison ajoute des dossiers privés, des pistes/offres saisies par l’acheteur et un comparateur de coûts. Elle ne fournit pas encore une qualification documentaire certifiée ni un envoi externe.
+
+Parcours : saisir le besoin → rechercher des entreprises → enregistrer le besoin et ses sources dans un dossier → ajouter une piste ou une offre → renseigner prix, taxes, transport, installation, devise, validité, délai et preuves → retrouver et modifier le suivi dans le compte.
+
+- Un dossier conserve une copie du besoin et uniquement une recherche correspondant exactement à cette version. Une recherche périmée après modification du besoin n’est pas jointe.
+- Offres modifiables ; identité du propriétaire et rattachement au dossier non modifiables par le client.
+- Les étapes « contacté » et « réponse reçue » sont des déclarations de l’acheteur, sans envoi par l’application.
+- Totaux en unités monétaires entières ; champs vides inconnus, zéro explicite inclus ; pas de total complet lorsqu’un poste manque.
+- Devises séparées, offres expirées ou sans validité et pistes sans réponse signalées non comparables. Aucun classement de qualité ou conformité déduit du prix.
+- Sources, conditions et notes de qualification affichées avec échappement HTML.
+- Limites actuelles d’affichage : 100 dossiers récents et 200 offres par dossier ; pagination non implémentée.
+
+Tests v2.8 : 22 tests Node réussis. Transaction Supabase annulée : lecture propriétaire, conservation des coûts inconnus, blocage lecture/modification/insertion intercomptes et usurpation du propriétaire, tous réussis. La vérification navigateur du parcours connecté nécessite une session utilisateur ; elle n’est pas remplacée par les tests SQL.
+
+La comparaison normalisée de coûts saisis est désormais implémentée. L’import automatisé de vrais devis, les preuves documentaires, la conversion de devises, les envois, les contrats, les paiements et les commissions restent à construire ou intégrer. L’ancien état ci-dessous reste l’historique de la v2.7.
+
+---
+
 # BROKER-ONE — état vérifié au 21 septembre 2026
 
 ## Résultat attendu pour l’usager
