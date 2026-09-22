@@ -12,7 +12,7 @@ Parcours : saisir le besoin → rechercher des entreprises → enregistrer le be
 - Sources, conditions et notes de qualification affichées avec échappement HTML.
 - Limites actuelles d’affichage : 100 dossiers récents et 200 offres par dossier ; pagination non implémentée.
 
-Tests v2.8 : 22 tests Node réussis. Transaction Supabase annulée : lecture propriétaire, conservation des coûts inconnus, blocage lecture/modification/insertion intercomptes et usurpation du propriétaire, tous réussis. La vérification navigateur du parcours connecté nécessite une session utilisateur ; elle n’est pas remplacée par les tests SQL.
+Tests v2.8 : 22 tests Node réussis. Transaction Supabase annulée : lecture propriétaire, conservation des coûts inconnus, blocage lecture/modification/insertion intercomptes et usurpation du propriétaire, tous réussis. Vérification navigateur en production réussie après connexion sécurisée : accès visiteur refusé avec message explicite, création du dossier [TEST v2.8], création d’une offre fictive avec transport inconnu et total inconnu, modification du transport à zéro, rechargement complet puis réouverture du dossier : total exact conservé de 1 150,12 CAD (base 1 000,10 + taxes 150,02). Les données sont explicitement fictives et restent identifiées comme test dans le compte. Aucun fournisseur contacté. Ce test ne valide pas encore l’import de documents ni une transaction commerciale complète.
 
 La comparaison normalisée de coûts saisis est désormais implémentée. L’import automatisé de vrais devis, les preuves documentaires, la conversion de devises, les envois, les contrats, les paiements et les commissions restent à construire ou intégrer. L’ancien état ci-dessous reste l’historique de la v2.7.
 
