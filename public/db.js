@@ -15,6 +15,7 @@ async function request(path, { method = 'GET', body, auth = true, headers = {} }
   const session = getSession();
   const response = await fetch(`${SUPABASE_URL}${path}`, {
     method,
+    signal: AbortSignal.timeout(20000),
     headers: {
       apikey: SUPABASE_KEY,
       'Content-Type': 'application/json',
@@ -22,6 +23,9 @@ async function request(path, { method = 'GET', body, auth = true, headers = {} }
       ...headers
     },
     body: body === undefined ? undefined : JSON.stringify(body)
+  }).catch(error => {
+    if(error.name === 'TimeoutError') throw new Error('Le service de données ne répond pas. Réessayez dans un instant.');
+    throw error;
   });
   const data = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.msg || data?.message || data?.error_description || `Erreur Supabase ${response.status}`);
@@ -79,3 +83,4 @@ export async function evidenceStorage(path,{file}={}) {
  if(!response.ok){const error=await response.json().catch(()=>null);throw new Error(error?.message||error?.error||`Erreur document ${response.status}`);}
  return file?response.json():response.blob();
 }
+

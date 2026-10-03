@@ -1,3 +1,13 @@
+# Reprise du 3 octobre 2026
+
+La v2.9 a été récupérée depuis l’arbre Git sauvegardé le 22 septembre puis publiée sur main au commit 74b360d4f1c549759bed2bc53dcdab9a0f9cdf7f. Vercel a confirmé le déploiement, et le navigateur affiche v2.9. L’échec antérieur de création du commit avait laissé main en v2.8.
+
+Projet Supabase trouvé INACTIVE ; remise en service demandée avec succès, état COMING_UP au dernier contrôle. La validation navigateur du dépôt réel et du téléchargement reste à effectuer après retour du service et connexion utilisateur. Les tests SQL documentés ci-dessous avaient réussi le 22 septembre ; ils ne prouvent pas la disponibilité actuelle.
+
+Correctif supplémentaire : délai maximal de 20 secondes pour les appels JSON Supabase et message explicite en cas de dépassement. 27 tests passent avec `node --test --test-isolation=none --test-reporter=spec test/*.test.js`.
+
+---
+
 # Livraison v2.9 — pièces privées et revues documentaires
 
 - Dépôt PDF/PNG/JPEG, 5 Mo maximum, rattaché à une offre du propriétaire connecté.
