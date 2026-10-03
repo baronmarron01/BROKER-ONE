@@ -1,4 +1,5 @@
 import {currentUser,table} from './db.js';
+import {mountEvidence} from './evidence.js';
 import {amountMinor,compareOffers} from './comparison.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=(v,c)=>v==null?'Inconnu':new Intl.NumberFormat('fr-CA',{style:'currency',currency:c}).format(v/100);
@@ -6,9 +7,10 @@ const stages={candidate:'Piste à qualifier',contacted_by_user:'Contact déclar�
 const costLabels={base_minor:'prix de base',tax_minor:'taxes',shipping_minor:'transport',installation_minor:'installation'};
 export function mountDossiers(getRequest,getResearch){
  const $=id=>document.getElementById(id);
+ const evidence=mountEvidence();
  let selected=null,offers=[],dossiers=[],generation=0;
  const status=message=>{$('dossierStatus').textContent=message;};
- function reset(){generation++;selected=null;offers=[];dossiers=[];$('dossierSelect').replaceChildren();$('dossierDetails').replaceChildren();$('offerRows').replaceChildren();$('offerForm').reset();$('offerId').value='';$('offerForm').hidden=true;}
+ function reset(){evidence.reset();generation++;selected=null;offers=[];dossiers=[];$('dossierSelect').replaceChildren();$('dossierDetails').replaceChildren();$('offerRows').replaceChildren();$('offerForm').reset();$('offerId').value='';$('offerForm').hidden=true;}
  async function load(){
   reset();if(!currentUser()){status('Connectez-vous pour conserver vos recherches et offres dans un dossier privé.');return;}
   const ticket=generation;
@@ -17,6 +19,7 @@ export function mountDossiers(getRequest,getResearch){
   }catch(e){status('Chargement impossible : '+e.message);}
  }
  async function open(id){
+  evidence.reset();
   const dossier=dossiers.find(d=>d.id===id);selected=dossier||null;offers=[];$('offerRows').replaceChildren();$('offerForm').reset();$('offerId').value='';$('offerForm').hidden=!dossier;
   if(!dossier){$('dossierDetails').replaceChildren();return;}
   const ticket=++generation;
@@ -25,7 +28,7 @@ export function mountDossiers(getRequest,getResearch){
  }
  function render(){
   const rows=compareOffers(offers);
-  $('offerRows').innerHTML=rows.length?`<div class="comparison-scroll"><table class="comparison-table"><caption>Offres regroupées par devise. Aucune conversion ni recommandation automatique.</caption><thead><tr><th>Entreprise et suivi</th><th>Base</th><th>Taxes</th><th>Transport</th><th>Installation</th><th>Total et validité</th><th>Preuves et conditions</th></tr></thead><tbody>${rows.map(o=>`<tr><td><b>${esc(o.supplier_name)}</b><p>${stages[o.stage]}</p><button class="mini edit-offer" data-id="${esc(o.id)}" type="button">Modifier</button></td>${['base_minor','tax_minor','shipping_minor','installation_minor'].map(k=>`<td>${money(o[k],o.currency)}</td>`).join('')}<td><b>${money(o.total_minor,o.currency)}</b><p>${o.missing.length?'Manquant : '+o.missing.map(k=>costLabels[k]).join(', '):o.comparable?'Montant complet déclaré':'Non comparable à ce stade'}</p><p>${o.expired?'EXPIRÉE · ':''}${esc(o.valid_until||'Validité inconnue')}</p><p>Délai : ${o.delivery_days==null?'inconnu':o.delivery_days+' jours'}</p></td><td><p>Saisie par l’acheteur · non vérifiée</p><p>${esc(o.qualification_notes||'Aucune preuve de qualification renseignée.')}</p><p>${esc(o.notes||'Conditions non renseignées.')}</p>${o.source_url?`<a href="${esc(o.source_url)}" target="_blank" rel="noopener noreferrer">Source fournie</a>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p>Aucune offre ni piste dans ce dossier. Ajoutez une entreprise ci-dessous.</p>';
+  $('offerRows').innerHTML=rows.length?`<div class="comparison-scroll"><table class="comparison-table"><caption>Offres regroupées par devise. Aucune conversion ni recommandation automatique.</caption><thead><tr><th>Entreprise et suivi</th><th>Base</th><th>Taxes</th><th>Transport</th><th>Installation</th><th>Total et validité</th><th>Preuves et conditions</th></tr></thead><tbody>${rows.map(o=>`<tr><td><b>${esc(o.supplier_name)}</b><p>${stages[o.stage]}</p><button class="mini edit-offer" data-id="${esc(o.id)}" type="button">Modifier</button><button class="mini offer-evidence" data-id="${esc(o.id)}" type="button">Pièces et revues</button></td>${['base_minor','tax_minor','shipping_minor','installation_minor'].map(k=>`<td>${money(o[k],o.currency)}</td>`).join('')}<td><b>${money(o.total_minor,o.currency)}</b><p>${o.missing.length?'Manquant : '+o.missing.map(k=>costLabels[k]).join(', '):o.comparable?'Montant complet déclaré':'Non comparable à ce stade'}</p><p>${o.expired?'EXPIRÉE · ':''}${esc(o.valid_until||'Validité inconnue')}</p><p>Délai : ${o.delivery_days==null?'inconnu':o.delivery_days+' jours'}</p></td><td><p>Saisie par l’acheteur · non vérifiée</p><p>${esc(o.qualification_notes||'Aucune preuve de qualification renseignée.')}</p><p>${esc(o.notes||'Conditions non renseignées.')}</p>${o.source_url?`<a href="${esc(o.source_url)}" target="_blank" rel="noopener noreferrer">Source fournie</a>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p>Aucune offre ni piste dans ce dossier. Ajoutez une entreprise ci-dessous.</p>';
  }
  $('saveDossierBtn').addEventListener('click',async()=>{
   if(!currentUser()){status('Connexion nécessaire : utilisez le bouton Connexion en haut de page.');return;}
@@ -39,6 +42,7 @@ export function mountDossiers(getRequest,getResearch){
  $('refreshDossiers').addEventListener('click',load);
  $('dossierSelect').addEventListener('change',()=>open($('dossierSelect').value));
  $('offerRows').addEventListener('click',e=>{
+  const docButton=e.target.closest('.offer-evidence');if(docButton){const item=offers.find(o=>o.id===docButton.dataset.id);if(item)evidence.open(item);return;}
   const button=e.target.closest('.edit-offer');if(!button)return;const offer=offers.find(o=>o.id===button.dataset.id);if(!offer)return;
   $('offerId').value=offer.id;
   for(const [id,key] of Object.entries({offerName:'supplier_name',offerSource:'source_url',offerCurrency:'currency',offerStage:'stage',offerValidity:'valid_until',offerDelivery:'delivery_days',offerNotes:'notes',offerQualification:'qualification_notes'}))$(id).value=offer[key]??'';

@@ -90,11 +90,31 @@
  <label>Qualification : preuves obtenues et points à vérifier<textarea id="offerQualification" maxlength="6000" placeholder="Identité de l’entreprise, capacité, certifications, documents datés, limites…"></textarea></label>
  <button id="saveOfferBtn" class="primary" type="submit">Enregistrer la piste ou l’offre</button><button id="newOfferBtn" class="secondary" type="button">Vider le formulaire pour une nouvelle offre</button>
  </form>
+<section id="evidencePanel" class="evidence-panel" aria-labelledby="evidenceTitle" hidden>
+ <h3 id="evidenceTitle">Pièces et revues documentaires</h3><p id="evidenceOffer"></p>
+ <p>Documents privés. Vos revues sont des appréciations datées, pas une certification du fournisseur. Aucun fichier n’est transmis à l’IA.</p>
+ <button id="closeEvidence" class="secondary" type="button">Fermer les pièces</button><button id="refreshEvidence" class="secondary" type="button">Actualiser les pièces</button>
+ <p id="evidenceStatus" role="status" aria-live="polite"></p><div id="documentList"></div>
+ <form id="documentForm"><h4>Joindre une pièce</h4>
+ <p>PDF, PNG ou JPEG, 5 Mo maximum. Le contrôle de format ne remplace pas une analyse antivirus. Déposez uniquement les documents que vous êtes autorisé à conserver.</p>
+ <label for="evidenceFile">Document</label><input id="evidenceFile" type="file" accept="application/pdf,image/png,image/jpeg" required>
+ <label for="documentProvenance">Provenance et référence</label><textarea id="documentProvenance" minlength="3" maxlength="2000" required placeholder="Ex. Devis reçu de l’entreprise, référence et canal de réception"></textarea>
+ <label for="receivedOn">Date de réception</label><input id="receivedOn" type="date" required>
+ <button id="uploadDocument" class="primary" type="submit">Déposer la pièce privée</button></form>
+ <form id="reviewForm" hidden><h4>Consigner votre revue</h4>
+ <label for="reviewDocument">Pièce examinée</label><select id="reviewDocument" required></select>
+ <div class="two"><label for="reviewCriterion">Point examiné<select id="reviewCriterion"><option value="identity">Identité de l’entreprise</option><option value="technical_fit">Adéquation technique</option><option value="commercial_terms">Conditions commerciales</option><option value="compliance">Conformité documentaire</option></select></label>
+ <label for="reviewFinding">Constat<select id="reviewFinding"><option value="insufficient">Preuves insuffisantes</option><option value="supported">Étayé selon votre revue</option><option value="contradicted">Contradiction relevée</option></select></label></div>
+ <label for="reviewConclusion">Justification, pages et limites</label><textarea id="reviewConclusion" required minlength="10" maxlength="4000"></textarea>
+ <p>Une revue enregistrée reste dans l’historique. Pour la corriger, ajoutez une nouvelle revue expliquant la correction.</p>
+ <button id="saveDocumentReview" class="primary" type="submit">Enregistrer ma revue datée</button></form>
+ <div id="reviewHistory"></div>
+</section>
 </section>
 <dialog id="aiDialog"><form method="dialog"><button class="close" aria-label="Fermer">×</button><small>ASSISTANT BORNÉ</small><h2>Questions de clarification</h2><div id="aiOutput" class="ai-output">Chargement…</div><label>Vos réponses et précisions<textarea id="clarificationAnswers" maxlength="2500" placeholder="Répondez aux questions utiles : produit, quantité, délai, contraintes…"></textarea></label><p id="clarificationStatus" role="status"></p><button id="applyClarifications" type="button" class="primary">Intégrer à ma demande</button><button class="primary">Fermer</button></form></dialog>
     <dialog id="authDialog"><form id="authForm"><button type="button" class="close" id="authClose" aria-label="Fermer">×</button><small>ACCÈS SÉCURISÉ</small><h2 id="authTitle">Connexion</h2><div id="signupFields" hidden><div class="two"><label>Nom<input id="displayName" autocomplete="name"></label><label>Entreprise<input id="companyName" autocomplete="organization"></label></div><label>Type de compte<select id="accountType"><option value="buyer">Acheteur</option><option value="provider">Fournisseur</option></select></label></div><label>Courriel<input id="authEmail" type="email" autocomplete="email" required></label><label>Mot de passe<input id="authPassword" type="password" minlength="8" autocomplete="current-password" required></label><p id="authMessage" class="form-message"></p><button class="primary" id="authSubmit" type="submit">Se connecter <span>→</span></button><button class="secondary" id="authToggle" type="button">Créer un compte</button></form></dialog>
   </main>
-  <footer>BROKER-ONE v2.8 · Recherche sourcée et préparation de devis · Aucun paiement réel</footer>
+  <footer>BROKER-ONE v2.9 · Recherche sourcée et préparation de devis · Aucun paiement réel</footer>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

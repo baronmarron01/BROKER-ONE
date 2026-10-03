@@ -65,3 +65,17 @@ export async function rpc(name, body = {}) {
 }
 
 export const currentUser = () => getSession()?.user || null;
+
+// Private Storage: use the current user's token, never a public or signed URL.
+export async function evidenceStorage(path,{file}={}) {
+ const session=getSession();
+ if(!session?.access_token)throw new Error('Connexion nécessaire.');
+ const encoded=path.split('/').map(encodeURIComponent).join('/');
+ const response=await fetch(`${SUPABASE_URL}/storage/v1/object/${file?'':'authenticated/'}offer-evidence/${encoded}`,{
+  method:file?'POST':'GET',
+  headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${session.access_token}`,...(file?{'Content-Type':file.type,'x-upsert':'false','cache-control':'no-store'}:{})},
+  body:file,cache:'no-store',signal:AbortSignal.timeout(60000)
+ });
+ if(!response.ok){const error=await response.json().catch(()=>null);throw new Error(error?.message||error?.error||`Erreur document ${response.status}`);}
+ return file?response.json():response.blob();
+}

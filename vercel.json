@@ -38,6 +38,14 @@
     {
       "source": "/comparison.js",
       "destination": "/public/comparison.js"
+    },
+    {
+      "source": "/evidence.js",
+      "destination": "/public/evidence.js"
+    },
+    {
+      "source": "/evidence-validation.js",
+      "destination": "/public/evidence-validation.js"
     }
   ],
   "headers": [

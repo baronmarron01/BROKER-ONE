@@ -1,3 +1,19 @@
+# Livraison v2.9 — pièces privées et revues documentaires
+
+- Dépôt PDF/PNG/JPEG, 5 Mo maximum, rattaché à une offre du propriétaire connecté.
+- Bucket privé ; accès par jeton utilisateur, aucune URL publique ou signée. Pas de remplacement des fichiers via Storage.
+- Provenance et date déclarées, empreinte SHA-256 calculée au dépôt et contrôlée avant téléchargement. Le contrôle de signature en navigateur ne constitue ni une analyse antivirus ni une authentification du document.
+- Confirmation en base uniquement si un objet Storage correspondant existe avec taille et MIME attendus ; reprise de confirmation disponible après interruption.
+- Revues append-only par critère (identité, technique, conditions, conformité), constat et justification. Date serveur. Aucune certification automatique, aucun changement du statut vérifié du fournisseur.
+- Aucune transmission documentaire à OpenAI. Aucun OCR ni extraction de prix automatique dans cette version.
+- Limites : 100 pièces et 200 revues affichées par offre ; pas encore de pagination, purge/rétention, antivirus serveur, partage fournisseur, ni circuit d'approbation.
+
+Validation : 26 tests Node réussis. Tests SQL transactionnels annulés : refus confirmation sans objet, refus revue avant dépôt, intégrité des liens propriétaire/offre/document, immutabilité des métadonnées et revues, lectures/écritures intercomptes interdites. Les objets Storage des tests SQL sont des métadonnées simulées, pas des fichiers transférés. Test navigateur réel à compléter après déploiement.
+
+Advisors : aucun nouvel avertissement lié aux tables ajoutées. Deux avertissements préexistants : fonction administrative SECURITY DEFINER accessible aux utilisateurs authentifiés et protection des mots de passe compromis désactivée.
+
+---
+
 # Livraison v2.8 — 22 septembre 2026
 
 Cette livraison ajoute des dossiers privés, des pistes/offres saisies par l’acheteur et un comparateur de coûts. Elle ne fournit pas encore une qualification documentaire certifiée ni un envoi externe.
