@@ -25,10 +25,16 @@ async function request(path, { method = 'GET', body, auth = true, headers = {} }
     body: body === undefined ? undefined : JSON.stringify(body)
   }).catch(error => {
     if(error.name === 'TimeoutError') throw new Error('Le service de données ne répond pas. Réessayez dans un instant.');
+    if(error instanceof TypeError) throw new Error('Connexion au service de données impossible. Vérifiez votre connexion réseau puis réessayez. Cet échec ne confirme pas un mot de passe incorrect.');
     throw error;
   });
   const data = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.msg || data?.message || data?.error_description || `Erreur Supabase ${response.status}`);
+  if (!response.ok) {
+    const error = new Error(data?.msg || data?.message || data?.error_description || `Erreur Supabase ${response.status}`);
+    error.status = response.status;
+    error.code = data?.error_code || data?.code;
+    throw error;
+  }
   return data;
 }
 
@@ -54,7 +60,12 @@ export async function refreshSession() {
   try {
     const data = await request('/auth/v1/token?grant_type=refresh_token', { method:'POST', auth:false, body:{ refresh_token:session.refresh_token } });
     saveSession(data); return data;
-  } catch { saveSession(null); return null; }
+  } catch (error) {
+    // Only an explicit rejection invalidates credentials. A network outage,
+    // rate limit or server error must leave the refresh token available.
+    if ([400, 401, 403].includes(error.status)) { saveSession(null); return null; }
+    return session.expires_at > Date.now() / 1000 ? session : null;
+  }
 }
 
 export async function table(name, { select = '*', filters = '', order = '', limit, method = 'GET', body, single = false } = {}) {
@@ -68,7 +79,10 @@ export async function rpc(name, body = {}) {
   return request(`/rest/v1/rpc/${encodeURIComponent(name)}`, { method:'POST', body });
 }
 
-export const currentUser = () => getSession()?.user || null;
+export const currentUser = () => {
+  const session = getSession();
+  return session?.expires_at > Date.now() / 1000 ? session.user || null : null;
+};
 
 // Private Storage: use the current user's token, never a public or signed URL.
 export async function evidenceStorage(path,{file}={}) {
