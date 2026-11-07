@@ -209,7 +209,7 @@ $('discoverBtn').addEventListener('click',async()=>{
   try {
     const request=requestFromForm();
     if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
-    const data=await api('/api/ai',{task:'discover_suppliers',input:JSON.stringify(request),locale:'fr'});
+    const data=await api('/api/ai',{task:'discover_suppliers',direction:$('searchDirection').value,input:JSON.stringify(request),locale:'fr'});
     lastResearch={request_key:JSON.stringify(request),content:data.content,citations:data.citations.map(c=>({...c,checked_at:data.checked_at})),checked_at:data.checked_at};
     const result=document.createElement('p');
     let offset=0;
