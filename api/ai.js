@@ -20,7 +20,8 @@ export default async function handler(req, res) {
   if (!tasks[task]) return sendError(res, 422, 'TASK_NOT_ALLOWED', 'Unsupported AI task.', context.id);
   if (input.length < 5 || input.length > 12_000) return sendError(res, 422, 'INVALID_INPUT', 'input must contain 5 to 12000 characters.', context.id);
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  // BROKERONE is the rotated production secret; retain the standard name for other environments.
+  const apiKey = process.env.BROKERONE?.trim() || process.env.OPENAI_API_KEY?.trim();
   const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
   if (!apiKey) return sendError(res, 503, 'AI_NOT_CONFIGURED', 'AI service is not configured. Deterministic endpoints remain available.', context.id);
 
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (response.status === 401) return sendError(res, 503, 'AI_CREDENTIAL_REJECTED', 'La clé du service IA est refusée ou expirée. L’administrateur doit la remplacer puis redéployer.', context.id);
       const status = response.status === 429 ? 429 : 502;
       return sendError(res, status, 'AI_PROVIDER_ERROR', 'AI provider request failed.', context.id, { provider_status: response.status });
     }
