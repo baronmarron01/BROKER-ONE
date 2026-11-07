@@ -46,6 +46,14 @@
     {
       "source": "/evidence-validation.js",
       "destination": "/public/evidence-validation.js"
+    },
+    {
+      "source": "/direction.js",
+      "destination": "/public/direction.js"
+    },
+    {
+      "source": "/market.js",
+      "destination": "/public/market.js"
     }
   ],
   "headers": [

@@ -1,3 +1,5 @@
+import {mountMarket} from './market.js';
+import {resolveDirection,requireDirection,roleLabel,targetLabel,draftMessage,uniqueBusinesses} from './direction.js';
 import {mountDossiers} from './dossiers.js';
 import { currentUser, getSession, refreshSession, rpc, signIn, signOut, signUp, table } from './db.js';
 
@@ -13,8 +15,8 @@ let authMode = 'signin';
 
 function requestFromForm() {
   return {
-    description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
-    min_budget: Number($('minBudget').value), max_budget: Number($('maxBudget').value), currency: $('currency').value,
+    direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
+    min_budget: $('minBudget').value===''?null:Number($('minBudget').value), max_budget: $('maxBudget').value===''?null:Number($('maxBudget').value), currency: $('currency').value,
     requires_physical_presence: $('physical').checked, requires_inspection: $('inspection').checked,
     requires_installation: $('installation').checked, requires_licensed_professional: $('licensed').checked
   };
@@ -78,43 +80,19 @@ $('authForm').addEventListener('submit',async event=>{
 $('requestForm').addEventListener('submit', async event => {
   event.preventDefault(); const button=event.submitter || $('requestForm').querySelector('button[type=submit]'); if(button) button.disabled=true; currentRequestId=null; $('matchesPanel').hidden=true;
   try {
-    currentRequest=requestFromForm(); const data=await api('/api/classify',currentRequest);
+    currentRequest=requestFromForm(); requireDirection(currentRequest); const data=await api('/api/classify',currentRequest);
     $('emptyState').hidden=true; $('classification').hidden=false;
     $('classValue').textContent=`Classe ${data.classification.pipeline_class}`; $('modeValue').textContent=data.classification.processing_mode.replaceAll('_',' '); $('traceBadge').textContent=`Trace ${data.trace_id.slice(0,8)}`;
     $('riskGrid').innerHTML=Object.entries(data.classification.risk_axes).map(([key,value])=>`<div class="risk"><span>${escapeHtml(labels[key] || key)}</span><b class="${escapeHtml(value)}">${escapeHtml(labels[value] || value)}</b></div>`).join('');
     $('gates').innerHTML=(data.classification.approval_gates.length?data.classification.approval_gates:['aucune approbation additionnelle']).map(value=>`<span class="chip">${escapeHtml(labels[value] || value.replaceAll('_',' '))}</span>`).join('');
     if(currentUser()) {
-      const saved=await table('requests',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,title:currentRequest.description.slice(0,90),description:currentRequest.description,category:currentRequest.category,location:currentRequest.location,min_budget_minor:Math.round(currentRequest.min_budget*100),max_budget_minor:Math.round(currentRequest.max_budget*100),currency:currentRequest.currency,constraints:{physical:currentRequest.requires_physical_presence,inspection:currentRequest.requires_inspection,installation:currentRequest.requires_installation,licensed:currentRequest.requires_licensed_professional},risk_axes:data.classification.risk_axes,approval_gates:data.classification.approval_gates,pipeline_class:data.classification.pipeline_class,processing_mode:data.classification.processing_mode,status:'classified'}});
+      const saved=await table('requests',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,title:currentRequest.description.slice(0,90),description:currentRequest.description,category:currentRequest.category,location:currentRequest.location,min_budget_minor:currentRequest.min_budget==null?null:Math.round(currentRequest.min_budget*100),max_budget_minor:currentRequest.max_budget==null?null:Math.round(currentRequest.max_budget*100),currency:currentRequest.currency,constraints:{direction:currentRequest.direction,physical:currentRequest.requires_physical_presence,inspection:currentRequest.requires_inspection,installation:currentRequest.requires_installation,licensed:currentRequest.requires_licensed_professional},risk_axes:data.classification.risk_axes,approval_gates:data.classification.approval_gates,pipeline_class:data.classification.pipeline_class,processing_mode:data.classification.processing_mode,status:'classified'}});
       currentRequestId=saved?.id; await audit('request.classified','request',currentRequestId,{trace_id:data.trace_id}); await loadHistory();
     }
   } catch(error){ alert(error.message); } finally{ if(button) button.disabled=false; }
 });
 
-$('matchBtn').addEventListener('click',async()=>{
-  const button=$('matchBtn'); button.disabled=true; button.firstChild.textContent='Recherche en cours… ';
-  try {
-    const searchData=await api('/api/search',{request:currentRequest,limit:20,include_external:false});
-    const candidates=searchData.candidates;
-    if(!candidates.length){$('matchesPanel').hidden=false;$('searchBadge').textContent='Aucun fournisseur qualifié';$('matches').textContent='Aucun fournisseur qualifié dans le registre pour ce besoin. Utilisez la recherche web ci-dessous pour identifier des entreprises à qualifier.';$('matchesPanel').scrollIntoView({behavior:'smooth'});return;}
-    const data=await api('/api/match',{request:currentRequest,candidates}); $('matchesPanel').hidden=false;
-    $('searchBadge').textContent=`${searchData.search.result_count} résultat(s) · ${searchData.search.internal_count} interne(s) · ${searchData.search.external_count} externe(s) · ${searchData.search.duration_ms} ms${searchData.search.fallback?' · rappel élargi':''}`;
-    $('matches').innerHTML=data.matches.map(item=>{const source=candidates.find(x=>x.provider_id===item.provider_id);const evidence=source?.provenance;const external=Boolean(source?.external);return `<article class="match"><div class="rank">${String(item.rank).padStart(2,'0')}</div><div><h3>${escapeHtml(item.name)}${item.eligible?'':' · EXCLU'}</h3><p>${escapeHtml(item.explanation)} ${item.confidence == null ? 'Confiance non établie : historique insuffisant.' : `Confiance indicative : ${Math.round(item.confidence*100)}%.`}</p><div class="evidence"><span>${external?'Candidat externe non vérifié':'Fournisseur vérifié'}</span><span>${Number(evidence?.source_count||0)} source(s)</span><span>Licence: ${escapeHtml(evidence?.licence||'interne')}</span><span>Vérification: ${evidence?.latest_checked_at?new Date(evidence.latest_checked_at).toLocaleDateString('fr-CA'):'non datée'}</span></div>${external?'<span class="badge muted">Validation requise avant contact</span>':currentUser()&&currentRequestId&&item.eligible?`<button class="mini quote-action" data-provider="${escapeHtml(item.provider_id)}">Demander un devis</button>`:''}</div><div class="score"><strong>${Math.round(item.score*100)}</strong><span>SCORE / 100</span></div></article>`}).join('');
-    if(currentUser()&&currentRequestId) {
-      const run=await table('search_runs',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,request_id:currentRequestId,query_text:searchData.search.query||currentRequest.description,filters:{category:currentRequest.category,location:currentRequest.location,min_budget:currentRequest.min_budget,max_budget:currentRequest.max_budget},connector:searchData.search.connector,result_count:candidates.length,duration_ms:searchData.search.duration_ms}});
-      for(const [index,candidate] of candidates.entries()) {
-        if(candidate.external) {
-          const [,sourceId] = candidate.provider_id.split(':');
-          await table('external_search_results',{method:'POST',body:{search_run_id:run.id,buyer_user_id:currentUser().id,external_key:candidate.provider_id,source_id:sourceId,display_name:candidate.name,position:index+1,score:candidate.semantic_score,verification_status:'unverified_candidate',provenance_snapshot:candidate.provenance||{}}}).catch(error=>{ $('searchBadge').textContent='Résultats affichés — historique partiellement enregistré'; console.warn('Échec de sauvegarde',error.message); });
-        } else await table('search_results',{method:'POST',body:{search_run_id:run.id,buyer_user_id:currentUser().id,provider_id:candidate.provider_id,position:index+1,lexical_score:candidate.lexical_score,filter_score:(candidate.location_score+candidate.constraint_score)/2,provenance_snapshot:candidate.provenance||{}}}).catch(error=>{ $('searchBadge').textContent='Résultats affichés — historique partiellement enregistré'; console.warn('Échec de sauvegarde',error.message); });
-      }
-      for(const item of data.matches) if(!String(item.provider_id).startsWith('external:')) await table('matches',{method:'POST',body:{request_id:currentRequestId,provider_id:item.provider_id,rank:item.rank,score:item.score,confidence:item.confidence ?? 0,eligible:item.eligible,explanation:item.explanation,score_breakdown:item.subscores || {}}}).catch(error=>{ $('searchBadge').textContent='Résultats affichés — historique partiellement enregistré'; console.warn('Échec de sauvegarde',error.message); });
-      await audit('search.completed','search_run',run.id,{connector:searchData.search.connector,count:candidates.length,fallback:searchData.search.fallback});
-      await audit('matching.completed','request',currentRequestId,{count:data.matches.length,search_run_id:run.id});
-    }
-    $('matchesPanel').scrollIntoView({behavior:'smooth',block:'start'});
-  } catch(error){ alert(error.message); }
-  finally { button.disabled=false; button.firstChild.textContent='Rechercher et classer les fournisseurs '; }
-});
+$('matchBtn').addEventListener('click',async()=>{const button=$('matchBtn');button.disabled=true;try{await market.search();}catch(error){alert(error.message);}finally{button.disabled=false;}});
 
 $('matches').addEventListener('click',async event=>{
   const button=event.target.closest('.quote-action'); if(!button)return; button.disabled=true;
@@ -122,7 +100,7 @@ $('matches').addEventListener('click',async event=>{
   catch(error){ alert(error.message.includes('duplicate')?'Un devis a déjà été demandé à ce fournisseur.':error.message); button.disabled=false; }
 });
 
-$('clarifyBtn').addEventListener('click',async()=>{ $('aiDialog').showModal(); $('aiOutput').textContent='Analyse de la demande…'; try{const data=await api('/api/ai',{task:'clarify_request',input:$('description').value,locale:'fr'});$('aiOutput').textContent=data.content||'Aucune question générée.';}catch(error){$('aiOutput').textContent=error.message+(error.code==='AI_NOT_CONFIGURED'?'\n\nOPENAI_API_KEY doit être configurée côté serveur.':'');} });
+$('clarifyBtn').addEventListener('click',async()=>{ $('aiDialog').showModal(); $('aiOutput').textContent='Analyse de la demande…'; try{const data=await api('/api/ai',{task:'clarify_request',direction:requestFromForm().direction||'auto',input:JSON.stringify(requestFromForm()),locale:'fr'});$('aiOutput').textContent=data.content||'Aucune question générée.';}catch(error){$('aiOutput').textContent=error.message+(error.code==='AI_NOT_CONFIGURED'?'\n\nOPENAI_API_KEY doit être configurée côté serveur.':'');} });
 
 async function loadDirectory(){
   try { directory=await table('providers',{select:'id,business_name,description,categories,service_zones,website,verification_status,reliability_score',filters:'&active=eq.true&owner_user_id=not.is.null',order:'reliability_score.desc'}); $('providerDirectory').innerHTML=directory.map(p=>`<article class="directory-card"><div><span class="badge">${escapeHtml(p.verification_status)}</span><h3>${escapeHtml(p.business_name)}</h3></div><p>${escapeHtml(p.description)}</p><div class="chips">${(p.categories||[]).map(x=>`<span class="chip">${escapeHtml(x)}</span>`).join('')}</div><small>Fiabilité ${Math.round(p.reliability_score*100)}% · ${(p.service_zones||[]).map(escapeHtml).join(', ')}</small></article>`).join('')||'<p class="list-empty">Aucun fournisseur vérifié.</p>'; }
@@ -185,12 +163,20 @@ $('verificationQueue').addEventListener('click',async event=>{
 
 document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab)); document.querySelectorAll('.workspace-view').forEach(x=>x.hidden=x.id!==`${tab.dataset.view}View`); if(tab.dataset.view==='providers')loadDirectory(); if(tab.dataset.view==='admin')loadAdmin(); }));
 
+const market=mountMarket(requestFromForm);
 await refreshSession();
-await Promise.all([health(),loadDirectory(),updateSessionUI()]);
+await Promise.all([health(),updateSessionUI()]);
+await market.load();
 
+let discoveryGeneration=0;
 // A changed need invalidates its previous classification and supplier ranking.
 function invalidateRequest() {
-  currentRequest=null; currentRequestId=null;
+  currentRequest=null; currentRequestId=null; lastResearch=null; discoveryGeneration++;
+  $('discoveryOutput').replaceChildren();
+  const direction=requestFromForm().direction;
+  $('directionStatus').textContent=direction?roleLabel(direction)+' → '+targetLabel(direction):'Choisissez votre objectif si le texte est ambigu.';
+  $('matchBtn').firstChild.textContent=direction==='sell'?'Rechercher les acheteurs / clients inscrits ':'Rechercher les vendeurs / prestataires inscrits ';
+  $('draftTitle').textContent=direction==='sell'?'Préparer une proposition commerciale':'Préparer une demande de devis';
   $('classification').hidden=true; $('emptyState').hidden=false; $('matchesPanel').hidden=true;
 }
 $('requestForm').addEventListener('input',invalidateRequest);
@@ -203,37 +189,34 @@ $('applyClarifications').addEventListener('click',()=>{
   invalidateRequest(); $('aiDialog').close(); $('description').focus();
   $('emptyState').textContent='Précisions intégrées. Cliquez sur Analyser et classer pour actualiser la décision.';
 });
+$('cancelDiscovery').addEventListener('click',()=>{discoveryGeneration++;$('cancelDiscovery').hidden=true;$('discoveryProgress').textContent='Recherche arrêtée. Les résultats déjà reçus restent disponibles.';});
+$('resultLimit').addEventListener('change',invalidateRequest);
 $('discoverBtn').addEventListener('click',async()=>{
-  const button=$('discoverBtn');button.disabled=true;
-  lastResearch=null; $('discoveryOutput').textContent='Recherche de sites d’entreprises…';
-  try {
-    const request=requestFromForm();
-    if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
-    const data=await api('/api/ai',{task:'discover_suppliers',direction:$('searchDirection').value,input:JSON.stringify(request),locale:'fr'});
-    lastResearch={request_key:JSON.stringify(request),content:data.content,citations:data.citations.map(c=>({...c,checked_at:data.checked_at})),checked_at:data.checked_at};
-    const result=document.createElement('p');
-    let offset=0;
-    for(const citation of (data.annotations || []).sort((a,b)=>a.start_index-b.start_index)){
-      if(citation.start_index<offset || citation.end_index>data.content.length)continue;
-      result.append(document.createTextNode(data.content.slice(offset,citation.start_index)));
-      const a=document.createElement('a');a.href=citation.url;a.textContent='[Source : '+(citation.title || new URL(citation.url).hostname)+']';a.target='_blank';a.rel='noopener noreferrer';result.append(a);offset=citation.end_index;
-    }
-    result.append(document.createTextNode(data.content.slice(offset)));
-    $('discoveryOutput').replaceChildren(result);
-    const label=document.createElement('p');label.textContent='Sources consultées — '+new Date(data.checked_at).toLocaleString('fr-CA');$('discoveryOutput').append(label);
-    for(const citation of data.citations){const p=document.createElement('p');const a=document.createElement('a');a.href=citation.url;a.textContent=citation.title;a.target='_blank';a.rel='noopener noreferrer';p.append(a);$('discoveryOutput').append(p);}
-  } catch(error){$('discoveryOutput').textContent=error.message;}
-  finally{button.disabled=false;}
+ const button=$('discoverBtn');button.disabled=true;$('cancelDiscovery').hidden=false;lastResearch=null;
+ const ticket=++discoveryGeneration;let entries=[];const request=requestFromForm();const requested=Number($('resultLimit').value);const key=JSON.stringify(request);
+ const render=()=>{
+  $('discoveryOutput').innerHTML='<p>'+escapeHtml(targetLabel(request.direction))+' · '+entries.length+' / '+requested+' entreprises distinctes. Intention, disponibilité et qualification non confirmées.</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Source officielle consultée</a><p>Intention d’achat / disponibilité : non confirmée.</p></article>').join('');
+  lastResearch={request_key:key,content:targetLabel(request.direction)+'\n'+entries.map((e,i)=>`${i+1}. ${e.name} — ${e.reason}\n${e.url}\nIntention et disponibilité non confirmées.`).join('\n\n'),citations:entries.map(e=>({url:e.url,title:e.name,checked_at:e.checked_at})),checked_at:new Date().toISOString(),requested_count:requested,actual_count:entries.length};
+ };
+ try{
+  requireDirection(request);if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
+  $('discoveryOutput').replaceChildren();
+  for(let batch=1;batch<=6&&entries.length<requested;batch++){
+   if(ticket!==discoveryGeneration)break;
+   $('discoveryProgress').textContent=`Lot ${batch}/6 maximum · ${entries.length}/${requested} entreprises trouvées. Recherche de nouvelles sources…`;
+   const data=await api('/api/ai',{task:'discover_suppliers',direction:request.direction,input:JSON.stringify(request),batch,exclude_urls:entries.map(e=>e.url),locale:'fr'});
+   if(ticket!==discoveryGeneration)break;
+   entries=uniqueBusinesses([...entries,...data.entries.map(e=>({...e,checked_at:data.checked_at}))]).slice(0,requested);render();
+  }
+  if(ticket===discoveryGeneration)$('discoveryProgress').textContent=entries.length>=requested?`Terminé : ${entries.length} entreprises distinctes avec sources.`:`Recherche terminée : ${entries.length}/${requested}. Le nombre demandé n’a pas été atteint avec les sources consultées. Aucun résultat inventé.`;
+ }catch(error){if(ticket===discoveryGeneration)$('discoveryProgress').textContent=`${error.message} — ${entries.length} résultat(s) conservé(s).`;}
+ finally{button.disabled=false;$('cancelDiscovery').hidden=true;}
 });
-$('draftInquiryBtn').addEventListener('click',()=>{
-  const r=requestFromForm();
-  $('inquiryDraft').value=`Objet : Demande de devis — ${r.description.slice(0,80)}\n\nBonjour,\n\nVoici notre besoin :\n${r.description}\n\nLieu : ${r.location || 'à préciser'}\nBudget indicatif : ${r.min_budget} à ${r.max_budget} ${r.currency} (à confirmer).\n\nMerci de confirmer :\n- votre capacité à répondre et les caractéristiques proposées ;\n- le prix détaillé, les taxes, le transport et l’installation ;\n- la disponibilité et le délai ;\n- les garanties, conditions de paiement et durée de validité ;\n- les preuves des certifications requises, le cas échéant.\n\nCoordonnées du demandeur : [à compléter]\n\nCette demande ne constitue pas une commande ni un engagement.\n`;
-  $('inquiryDraft').focus();
-});
+$('draftInquiryBtn').addEventListener('click',()=>{try{$('inquiryDraft').value=draftMessage(requestFromForm());$('inquiryDraft').focus();}catch(error){$('inquiryStatus').textContent=error.message;}});
 $('downloadInquiryBtn').addEventListener('click',()=>{
   if(!$('inquiryDraft').value.trim()){alert('Préparez le texte du devis avant de le télécharger.');return;}
   const url=URL.createObjectURL(new Blob([$('inquiryDraft').value],{type:'text/plain;charset=utf-8'}));
-  const a=document.createElement('a');a.href=url;a.download='broker-one-demande-devis-brouillon.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const a=document.createElement('a');a.href=url;a.download='broker-one-message-commercial-brouillon.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 
 $('saveInquiryBtn').addEventListener('click',async()=>{
@@ -245,5 +228,6 @@ $('saveInquiryBtn').addEventListener('click',async()=>{
   finally{$('saveInquiryBtn').disabled=false;}
 });
 
+invalidateRequest();
 const loadDossiers=mountDossiers(requestFromForm,()=>lastResearch);
 await loadDossiers();

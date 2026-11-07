@@ -17,21 +17,21 @@
   <main>
     <section class="hero">
       <p class="eyebrow">COURTAGE B2B ASSISTÉ</p>
-      <h1>De votre besoin à une liste de fournisseurs <em>explicable.</em></h1>
+      <h1>De votre offre ou besoin aux <em>bons interlocuteurs.</em></h1>
       <p>Prototype fonctionnel de classification des risques et de matching déterministe. Aucun paiement et aucun engagement automatique.</p>
     </section>
 
     <section class="grid">
       <form id="requestForm" class="panel">
         <div class="panel-head"><div><small>ÉTAPE 01</small><h2>Définir la demande</h2></div><span class="badge">Local + API</span></div>
-        <label>Besoin détaillé<textarea id="description" required minlength="10" maxlength="4000">Je cherche une machine commerciale d'emballage alimentaire avec livraison à Montréal.</textarea></label>
+        <label>Objectif de la recherche<select id="searchDirection"><option value="auto">Détecter depuis mon texte</option><option value="sell">Je vends — trouver des acheteurs potentiels</option><option value="buy">J’achète — trouver des fournisseurs</option></select></label><p id="directionStatus" role="status"></p><label>Besoin détaillé<textarea id="description" required minlength="10" maxlength="4000">Je cherche une machine commerciale d'emballage alimentaire avec livraison à Montréal.</textarea></label>
         <div class="two">
           <label>Catégorie<select id="category"><option value="industrial">Équipement industriel</option><option value="it">Logiciel / TI</option><option value="beauty">Équipement esthétique</option><option value="medical">Médical réglementé</option><option value="legal">Service juridique</option></select></label>
           <label>Localisation<input id="location" value="Montréal, Québec"></label>
         </div>
         <div class="three">
-          <label>Budget min.<input id="minBudget" type="number" min="0" value="5000"></label>
-          <label>Budget max.<input id="maxBudget" type="number" min="0" value="12000"></label>
+          <label>Budget / prix min.<input id="minBudget" type="number" min="0" placeholder="À préciser"></label>
+          <label>Budget / prix max.<input id="maxBudget" type="number" min="0" placeholder="À préciser"></label>
           <label>Devise<select id="currency"><option>CAD</option><option>USD</option><option>EUR</option></select></label>
         </div>
         <fieldset><legend>Contraintes opérationnelles</legend>
@@ -52,20 +52,20 @@
           <h3>Axes de risque</h3><div id="riskGrid" class="risk-grid"></div>
           <h3>Approbations</h3><div id="gates" class="chips"></div>
           <p class="notice">Classification opérationnelle seulement — aucune décision légale ou achat automatique.</p>
-          <button id="matchBtn" class="primary" type="button">Rechercher et classer les fournisseurs <span>→</span></button>
+          <button id="matchBtn" class="primary" type="button">Rechercher les interlocuteurs inscrits <span>→</span></button>
         </div>
       </section>
     </section>
 
     <section class="panel matches" id="matchesPanel" hidden>
-      <div class="panel-head"><div><small>ÉTAPE 03 · PHASE 04</small><h2>Fournisseurs recherchés et classés</h2></div><span class="badge" id="searchBadge">Registre + preuves</span></div>
+      <div class="panel-head"><div><small>ÉTAPE 03 · PHASE 04</small><h2>Correspondances du registre</h2></div><span class="badge" id="searchBadge">Registre + preuves</span></div>
       <div id="matches"></div>
     </section>
 
     <section class="workspace" id="workspace">
       <div class="workspace-head"><div><p class="eyebrow">ESPACE SÉCURISÉ</p><h2>Opérations et traçabilité</h2></div><span id="sessionBadge" class="badge muted">Mode visiteur</span></div>
       <div class="workspace-tabs" role="tablist">
-        <button class="tab active" data-view="history">Historique</button><button class="tab" data-view="providers">Fournisseurs</button><button class="tab" data-view="quotes">Devis</button><button class="tab" data-view="provider">Espace fournisseur</button><button class="tab" data-view="admin" id="adminTab" hidden>Administration</button>
+        <button class="tab active" data-view="history">Historique</button><button class="tab" data-view="providers" hidden>Ancien registre fournisseurs</button><button class="tab" data-view="quotes">Anciens devis</button><button class="tab" data-view="provider" hidden>Ancien espace fournisseur</button><button class="tab" data-view="admin" id="adminTab" hidden>Administration</button>
       </div>
       <section class="panel workspace-view" id="historyView"><div class="panel-head"><div><small>PHASES 01 + 07</small><h2>Demandes et piste d’audit</h2></div><button id="refreshHistory" class="mini">Actualiser</button></div><div id="historyContent" class="list-empty">Connectez-vous pour enregistrer et retrouver vos demandes.</div></section>
       <section class="panel workspace-view" id="providersView" hidden><div class="panel-head"><div><small>PHASE 03</small><h2>Registre fournisseurs</h2></div><span class="badge">Vérifiés</span></div><div id="providerDirectory" class="cards"></div></section>
@@ -74,11 +74,22 @@
       <section class="panel workspace-view" id="adminView" hidden><div class="panel-head"><div><small>PHASE 04 + 06</small><h2>Vérification et administration</h2></div><button id="refreshAdmin" class="mini">Actualiser</button></div><div id="adminStats" class="stat-grid"></div><div class="admin-section"><div class="panel-head"><div><small>FILE DE CONTRÔLE</small><h3>Candidats externes</h3></div><span class="badge muted">Décision humaine obligatoire</span></div><div id="verificationQueue" class="verification-queue"><p class="list-empty">Chargement…</p></div></div></section>
     </section>
 
-    <section class="panel"><small>RECHERCHE SOURCÉE</small><h2>Découvrir des entreprises sur le web</h2><p>Résultats à qualifier. Les prix, disponibilités et certifications doivent être confirmés auprès des entreprises.</p><label>Objectif de la recherche<select id="searchDirection"><option value="auto">Détecter depuis mon texte</option><option value="sell">Je vends — trouver des acheteurs potentiels</option><option value="buy">J’achète — trouver des fournisseurs</option></select></label><p>Une entreprise pertinente n’est pas un acheteur confirmé : son intention d’achat doit être vérifiée.</p>
-<button id="discoverBtn" type="button" class="primary">Rechercher des entreprises réelles</button><div id="discoveryOutput" class="ai-output" aria-live="polite"></div><h3>Préparer une demande de devis</h3><p>Document à relire puis transmettre vous-même. Aucun message n’est envoyé par ce bouton.</p><button id="draftInquiryBtn" type="button" class="secondary">Préparer le texte</button><label>Texte modifiable<textarea id="inquiryDraft" rows="12" maxlength="12000"></textarea></label><button id="saveInquiryBtn" type="button" class="secondary">Enregistrer le brouillon dans mon compte</button><p id="inquiryStatus" role="status"></p><button id="downloadInquiryBtn" type="button" class="secondary">Télécharger le brouillon</button></section>
+    <section class="panel"><small>RECHERCHE SOURCÉE</small><h2>Découvrir des entreprises sur le web</h2><p>Résultats à qualifier. Les prix, disponibilités et certifications doivent être confirmés auprès des entreprises.</p><p>Une entreprise pertinente n’est pas un acheteur confirmé : son intention d’achat doit être vérifiée.</p>
+<label>Nombre d’entreprises demandé<select id="resultLimit"><option value="20">20 entreprises</option><option value="15">15 entreprises</option></select></label><p>Recherche par lots successifs (jusqu’à 6 appels IA). Vous pouvez arrêter et conserver les résultats reçus.</p><button id="cancelDiscovery" type="button" class="secondary" hidden>Arrêter la recherche</button><p id="discoveryProgress" role="status" aria-live="polite"></p><button id="discoverBtn" type="button" class="primary">Rechercher des entreprises réelles</button><div id="discoveryOutput" class="ai-output" aria-live="polite"></div><h3 id="draftTitle">Préparer un message commercial</h3><p>Document à relire puis transmettre vous-même. Aucun message n’est envoyé par ce bouton.</p><button id="draftInquiryBtn" type="button" class="secondary">Préparer le texte</button><label>Texte modifiable<textarea id="inquiryDraft" rows="12" maxlength="12000"></textarea></label><button id="saveInquiryBtn" type="button" class="secondary">Enregistrer le brouillon dans mon compte</button><p id="inquiryStatus" role="status"></p><button id="downloadInquiryBtn" type="button" class="secondary">Télécharger le brouillon</button></section>
+<section class="panel" id="marketPanel"><h2>Registre achat / vente et échanges privés</h2>
+<p>Un même compte peut acheter, vendre, proposer ou rechercher un service. Les annonces actives sont publiques ; les messages sont privés entre leurs deux participants.</p>
+<button id="refreshMarket" class="secondary" type="button">Actualiser mes annonces et échanges</button><p id="marketStatus" role="status"></p>
+<form id="listingForm"><h3>Publier le besoin ou l’offre du formulaire principal</h3><input type="hidden" id="listingId">
+<label>Nom public de votre entreprise<input id="listingBusiness" required minlength="2" maxlength="160"></label><label>Site officiel<input id="listingWebsite" type="url" maxlength="2000" placeholder="https://"></label>
+<label>Visibilité<select id="listingStatus"><option value="draft">Brouillon privé</option><option value="active">Publier au registre</option><option value="closed">Fermer / retirer du registre public</option></select></label>
+<label class="check"><input id="publishConsent" type="checkbox"><span>J’autorise la publication du nom, du descriptif, du site et de la localisation saisis.</span></label>
+<button id="saveListing" class="primary" type="submit">Enregistrer l’annonce</button><button id="newListing" class="secondary" type="button">Nouvelle annonce</button></form><div id="myListings"></div>
+<form id="startThreadForm" hidden><h3>Premier message privé</h3><p id="recipientName"></p><input type="hidden" id="recipientListing"><label>Votre message<textarea id="startThreadBody" required maxlength="6000"></textarea></label><p>Ce bouton envoie uniquement dans le portail, au destinataire indiqué. Aucun email externe.</p><button id="sendFirstMessage" class="primary" type="submit">Envoyer ce message au destinataire</button></form>
+<h3>Mes conversations et propositions</h3><label>Conversation<select id="threadSelect"><option>Connexion nécessaire</option></select></label><div id="threadMessages"></div>
+<form id="marketMessageForm" hidden><label>Réponse / conditions<textarea id="replyBody" required maxlength="6000"></textarea></label><div class="three"><label>Montant proposé (facultatif)<input id="replyAmount" inputmode="decimal"></label><label>Devise<select id="replyCurrency"><option>CAD</option><option>USD</option><option>EUR</option></select></label><label>Valable jusqu’au<input id="replyValidity" type="date"></label></div><button id="sendMarketReply" class="primary" type="submit">Envoyer la réponse / proposition</button></form></section>
 <section class="panel dossier-panel" aria-labelledby="dossierTitle">
- <small>DOSSIERS ET COMPARAISON</small><h2 id="dossierTitle">Du besoin aux offres reçues</h2>
- <p>Conservez le besoin et sa recherche sourcée, suivez vos démarches et comparez les coûts déclarés. Aucun contact ni achat automatique.</p>
+ <small>DOSSIERS ET COMPARAISON</small><h2 id="dossierTitle">De l’offre ou du besoin aux échanges suivis</h2>
+ <p>Conservez le besoin et sa recherche sourcée, suivez vos démarches et comparez les propositions reçues selon votre rôle. Aucun contact ni achat automatique.</p>
  <button id="saveDossierBtn" class="primary" type="button">Enregistrer le besoin et sa recherche dans un dossier</button>
  <div class="two"><label>Dossier enregistré<select id="dossierSelect"><option value="">Connexion nécessaire</option></select></label><button id="refreshDossiers" type="button" class="secondary">Actualiser mes dossiers</button></div>
  <p id="dossierStatus" role="status" aria-live="polite"></p><div id="dossierDetails"></div><div id="offerRows"></div>
@@ -93,7 +104,7 @@
  </form>
 <section id="evidencePanel" class="evidence-panel" aria-labelledby="evidenceTitle" hidden>
  <h3 id="evidenceTitle">Pièces et revues documentaires</h3><p id="evidenceOffer"></p>
- <p>Documents privés. Vos revues sont des appréciations datées, pas une certification du fournisseur. Aucun fichier n’est transmis à l’IA.</p>
+ <p>Documents privés. Vos revues sont des appréciations datées, pas une certification de l’interlocuteur. Aucun fichier n’est transmis à l’IA.</p>
  <button id="closeEvidence" class="secondary" type="button">Fermer les pièces</button><button id="refreshEvidence" class="secondary" type="button">Actualiser les pièces</button>
  <p id="evidenceStatus" role="status" aria-live="polite"></p><div id="documentList"></div>
  <form id="documentForm"><h4>Joindre une pièce</h4>
@@ -113,9 +124,9 @@
 </section>
 </section>
 <dialog id="aiDialog"><form method="dialog"><button class="close" aria-label="Fermer">×</button><small>ASSISTANT BORNÉ</small><h2>Questions de clarification</h2><div id="aiOutput" class="ai-output">Chargement…</div><label>Vos réponses et précisions<textarea id="clarificationAnswers" maxlength="2500" placeholder="Répondez aux questions utiles : produit, quantité, délai, contraintes…"></textarea></label><p id="clarificationStatus" role="status"></p><button id="applyClarifications" type="button" class="primary">Intégrer à ma demande</button><button class="primary">Fermer</button></form></dialog>
-    <dialog id="authDialog"><form id="authForm"><button type="button" class="close" id="authClose" aria-label="Fermer">×</button><small>ACCÈS SÉCURISÉ</small><h2 id="authTitle">Connexion</h2><div id="signupFields" hidden><div class="two"><label>Nom<input id="displayName" autocomplete="name"></label><label>Entreprise<input id="companyName" autocomplete="organization"></label></div><label>Type de compte<select id="accountType"><option value="buyer">Acheteur</option><option value="provider">Fournisseur</option></select></label></div><label>Courriel<input id="authEmail" type="email" autocomplete="email" required></label><label>Mot de passe<input id="authPassword" type="password" minlength="8" autocomplete="current-password" required></label><p id="authMessage" class="form-message"></p><button class="primary" id="authSubmit" type="submit">Se connecter <span>→</span></button><button class="secondary" id="authToggle" type="button">Créer un compte</button></form></dialog>
+    <dialog id="authDialog"><form id="authForm"><button type="button" class="close" id="authClose" aria-label="Fermer">×</button><small>ACCÈS SÉCURISÉ</small><h2 id="authTitle">Connexion</h2><div id="signupFields" hidden><div class="two"><label>Nom<input id="displayName" autocomplete="name"></label><label>Entreprise<input id="companyName" autocomplete="organization"></label></div><label>Profil initial (achat et vente possibles)<select id="accountType"><option value="buyer">Acheteur</option><option value="provider">Fournisseur</option></select></label></div><label>Courriel<input id="authEmail" type="email" autocomplete="email" required></label><label>Mot de passe<input id="authPassword" type="password" minlength="8" autocomplete="current-password" required></label><p id="authMessage" class="form-message"></p><button class="primary" id="authSubmit" type="submit">Se connecter <span>→</span></button><button class="secondary" id="authToggle" type="button">Créer un compte</button></form></dialog>
   </main>
-  <footer>BROKER-ONE v2.9 · Recherche sourcée et préparation de devis · Aucun paiement réel</footer>
+  <footer>BROKER-ONE v3.0 · Recherche sourcée et préparation de devis · Aucun paiement réel</footer>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -16,7 +16,7 @@ export function summarizeOffer(offer,today=new Date().toISOString().slice(0,10))
   const comparable=missing.length===0 && !expired && Boolean(offer.valid_until) && offer.stage==='response_received';
   return {...offer,total_minor:missing.length?null:subtotal,known_subtotal_minor:subtotal,missing,expired,comparable};
 }
-export function compareOffers(offers,today) {
+export function compareOffers(offers,today,direction='buy') {
   // Currency groups are independent; no invented exchange rate.
-  return offers.map(o=>summarizeOffer(o,today)).sort((a,b)=>a.currency.localeCompare(b.currency)||Number(b.comparable)-Number(a.comparable)||(a.total_minor??Infinity)-(b.total_minor??Infinity)||a.supplier_name.localeCompare(b.supplier_name));
+  return offers.map(o=>summarizeOffer(o,today)).sort((a,b)=>a.currency.localeCompare(b.currency)||Number(b.comparable)-Number(a.comparable)||(direction==='sell'?(b.total_minor??-Infinity)-(a.total_minor??-Infinity):(a.total_minor??Infinity)-(b.total_minor??Infinity))||a.supplier_name.localeCompare(b.supplier_name));
 }
