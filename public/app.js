@@ -15,7 +15,7 @@ let authMode = 'signin';
 
 function requestFromForm() {
   return {
-    intent_mode: $('intentMode').value, direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
+    search_scope:$('searchScope').value,target_region:$('targetRegion').value.trim(),intent_mode: $('intentMode').value, direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
     min_budget: $('minBudget').value===''?null:Number($('minBudget').value), max_budget: $('maxBudget').value===''?null:Number($('maxBudget').value), currency: $('currency').value,
     requires_physical_presence: $('physical').checked, requires_inspection: $('inspection').checked,
     requires_installation: $('installation').checked, requires_licensed_professional: $('licensed').checked
@@ -86,7 +86,7 @@ $('requestForm').addEventListener('submit', async event => {
     $('riskGrid').innerHTML=Object.entries(data.classification.risk_axes).map(([key,value])=>`<div class="risk"><span>${escapeHtml(labels[key] || key)}</span><b class="${escapeHtml(value)}">${escapeHtml(labels[value] || value)}</b></div>`).join('');
     $('gates').innerHTML=(data.classification.approval_gates.length?data.classification.approval_gates:['aucune approbation additionnelle']).map(value=>`<span class="chip">${escapeHtml(labels[value] || value.replaceAll('_',' '))}</span>`).join('');
     if(currentUser()) {
-      const saved=await table('requests',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,title:currentRequest.description.slice(0,90),description:currentRequest.description,category:currentRequest.category,location:currentRequest.location,min_budget_minor:currentRequest.min_budget==null?null:Math.round(currentRequest.min_budget*100),max_budget_minor:currentRequest.max_budget==null?null:Math.round(currentRequest.max_budget*100),currency:currentRequest.currency,constraints:{direction:currentRequest.direction,physical:currentRequest.requires_physical_presence,inspection:currentRequest.requires_inspection,installation:currentRequest.requires_installation,licensed:currentRequest.requires_licensed_professional},risk_axes:data.classification.risk_axes,approval_gates:data.classification.approval_gates,pipeline_class:data.classification.pipeline_class,processing_mode:data.classification.processing_mode,status:'classified'}});
+      const saved=await table('requests',{method:'POST',single:true,body:{buyer_user_id:currentUser().id,title:currentRequest.description.slice(0,90),description:currentRequest.description,category:currentRequest.category,location:currentRequest.location,min_budget_minor:currentRequest.min_budget==null?null:Math.round(currentRequest.min_budget*100),max_budget_minor:currentRequest.max_budget==null?null:Math.round(currentRequest.max_budget*100),currency:currentRequest.currency,constraints:{search_scope:currentRequest.search_scope,target_region:currentRequest.target_region,direction:currentRequest.direction,physical:currentRequest.requires_physical_presence,inspection:currentRequest.requires_inspection,installation:currentRequest.requires_installation,licensed:currentRequest.requires_licensed_professional},risk_axes:data.classification.risk_axes,approval_gates:data.classification.approval_gates,pipeline_class:data.classification.pipeline_class,processing_mode:data.classification.processing_mode,status:'classified'}});
       currentRequestId=saved?.id; await audit('request.classified','request',currentRequestId,{trace_id:data.trace_id}); await loadHistory();
     }
   } catch(error){ alert(error.message); } finally{ if(button) button.disabled=false; }
@@ -173,6 +173,8 @@ let discoveryGeneration=0;
 function invalidateRequest() {
   currentRequest=null; currentRequestId=null; lastResearch=null; discoveryGeneration++;
   $('discoveryOutput').replaceChildren(); $('discoveryProgress').textContent='';
+  const scope=$('searchScope').value;$('targetRegionLabel').hidden=scope!=='custom';
+  $('geographyStatus').textContent=scope==='worldwide'?'Recherche mondiale ; la localisation utilisateur ne limite pas les pays des résultats.':'Zone ciblée : '+(scope==='local'?$('location').value:($('targetRegion').value||'à préciser'))+' — sans élargissement automatique.';
   const direction=requestFromForm().direction;
   $('directionStatus').textContent=direction?roleLabel(direction)+' → '+targetLabel(direction):'Choisissez votre objectif si le texte est ambigu.';
   $('matchBtn').firstChild.textContent=direction==='sell'?'Rechercher les acheteurs / clients inscrits ':'Rechercher les vendeurs / prestataires inscrits ';
@@ -197,18 +199,18 @@ $('discoverBtn').addEventListener('click',async()=>{
  const ticket=++discoveryGeneration;let entries=[];const request=requestFromForm();const requested=Number($('resultLimit').value);const strict=request.direction==='sell'&&request.intent_mode==='active_demand';const key=JSON.stringify(request);let coverage='';
  const evidenceText=e=>e.evidence?`Demande publiée à vérifier. Publication : ${e.evidence.published_at} ; échéance : ${e.evidence.deadline||'inconnue'}. Extrait identifié par IA : ${e.evidence.excerpt}. Achat immédiat, budget et décisionnaire non confirmés.`:'Prospect uniquement : intention et disponibilité non confirmées.';
  const render=()=>{
-  $('discoveryOutput').innerHTML='<p>'+entries.length+' / '+requested+' entreprises · '+(strict?'Demandes d’achat publiées à vérifier':'Prospects / fournisseurs')+'</p><p>'+escapeHtml(coverage)+'</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Consulter la source</a><p>'+escapeHtml(evidenceText(e))+'</p></article>').join('');
+  $('discoveryOutput').innerHTML='<p>'+entries.length+' / '+requested+' entreprises · '+(strict?'Demandes d’achat publiées à vérifier':'Prospects / fournisseurs')+'</p><p>'+escapeHtml(coverage)+'</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>Localisation : '+escapeHtml(e.location||'Non renseignée')+'</p><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Consulter la source</a><p>'+escapeHtml(evidenceText(e))+'</p></article>').join('');
   lastResearch={request_key:key,content:(strict?'Demandes publiées à vérifier':'Prospects / fournisseurs')+'\n'+coverage+'\n'+entries.map((e,i)=>`${i+1}. ${e.name} — ${e.reason}\n${e.url}\n${evidenceText(e)}`).join('\n\n'),citations:entries.map(e=>({url:e.url,title:e.name,checked_at:e.checked_at})),checked_at:new Date().toISOString(),requested_count:requested,actual_count:entries.length};
  };
  try{
-  requireDirection(request);if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
+  requireDirection(request);if(request.search_scope!=='worldwide'&&!(request.search_scope==='local'?request.location:request.target_region))throw new Error('Précisez la zone de recherche.');if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
   $('discoveryOutput').replaceChildren();
   for(let batch=1;batch<=6&&entries.length<requested;batch++){
    if(ticket!==discoveryGeneration)break;
    $('discoveryProgress').textContent=`Lot ${batch}/6 maximum · ${entries.length}/${requested} entreprises trouvées. Recherche de nouvelles sources…`;
    const data=await api('/api/ai',{task:'discover_suppliers',intent_mode:strict?'active_demand':'prospects',direction:request.direction,input:JSON.stringify(request),batch,exclude_urls:entries.map(e=>e.url),locale:'fr'});
    if(ticket!==discoveryGeneration)break;
-   coverage=data.note?('Synthèse de recherche générée par IA (couverture non exhaustive) : '+data.note):coverage;
+   coverage=data.note?('Zone : '+(data.search_plan?.target||'non précisée')+' · Secteur : '+(data.search_plan?.sector||'général')+' · Sources prioritaires : '+(data.search_plan?.source_families||[]).join(', ')+'. Synthèse IA non exhaustive : '+data.note):coverage;
    const merged=[...entries,...data.entries.map(e=>({...e,checked_at:data.checked_at}))];
    entries=(strict?merged.filter((e,i,a)=>a.findIndex(x=>x.url===e.url||x.name.toLowerCase()===e.name.toLowerCase())===i):uniqueBusinesses(merged)).slice(0,requested);render();
    if(strict&&batch>=2&&data.entries.length===0)break;

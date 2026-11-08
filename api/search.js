@@ -1,3 +1,4 @@
+import {searchPlan} from '../lib/search-plan.js';
 import { prepare } from '../lib/handler.js';
 import { safeBody, sendError } from '../lib/http.js';
 import { validateRequest } from '../lib/domain.js';
@@ -28,6 +29,7 @@ export default async function handler(req, res) {
     if (!validation.ok) return sendError(res, 422, 'VALIDATION_FAILED', 'Request validation failed.', context.id, validation.errors);
     const limit = Math.min(100, Math.max(1, Math.floor(Number(body.limit)) || 20));
     const request=validation.value;
+    let plan;try{plan=searchPlan(request,request.direction);}catch(error){return sendError(res,422,'INVALID_GEOGRAPHY',error.message,context.id);}
     if(!request.direction)return sendError(res,422,'DIRECTION_REQUIRED','Choisissez votre rôle achat ou vente.',context.id);
     const response=await fetch(`${SUPABASE_URL}/rest/v1/rpc/search_market_registry`,{
       method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},
@@ -35,8 +37,9 @@ export default async function handler(req, res) {
       body:JSON.stringify({search_direction:request.direction,search_category:request.category,search_text:buildSearchQuery(request.description),max_results:limit})
     });
     if(!response.ok)throw new Error('REGISTRY_UNAVAILABLE');
-    const rows=await response.json();
-    return res.status(200).json({candidates:rows,search:{connector:'bidirectional_registry',result_count:rows.length,direction:request.direction,duration_ms:Date.now()-started},trace_id:context.id});
+    let rows=await response.json();
+    if(plan.scope!=='worldwide'){const norm=s=>String(s||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();const regions=plan.target.split(';').map(norm).filter(Boolean);rows=rows.filter(r=>regions.some(t=>norm(r.location).includes(t)));}
+    return res.status(200).json({candidates:rows,search:{connector:'bidirectional_registry',geography:plan.target,geography_method:'Literal declared location filter; no geocoding. Use semicolons for multiple regions.',result_count:rows.length,direction:request.direction,duration_ms:Date.now()-started},trace_id:context.id});
   } catch (error) {
     const tooLarge = error.message === 'PAYLOAD_TOO_LARGE';
     return sendError(res, tooLarge ? 413 : 502, 'SEARCH_FAILED', tooLarge ? 'Payload too large.' : 'Registre momentanément indisponible.', context.id);

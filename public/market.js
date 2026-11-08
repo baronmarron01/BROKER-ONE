@@ -8,7 +8,7 @@ export function mountMarket(getRequest){
  const status=s=>{$('marketStatus').textContent=s;};
  function renderCandidates(rows){
   candidates=rows;
-  $('matchesPanel').hidden=false;$('searchBadge').textContent=rows.length+' annonce(s) publiée(s) · déclarations non vérifiées';
+  $('matchesPanel').hidden=false;$('searchBadge').textContent=rows.length+' annonce(s) publiée(s) · déclarations non vérifiées · filtre de zone par texte déclaré, sans géocodage';
   $('matches').innerHTML=rows.map(l=>`<article class="match"><div><span class="badge">${roleLabel(l.direction)}</span><h3>${esc(l.business_name)} — ${esc(l.title)}</h3><p>${esc(l.description)}</p><p>${esc(l.location)} · annonce du ${new Date(l.created_at).toLocaleDateString('fr-CA')}</p><p>Intérêt déclaré par publication ; disponibilité et qualification à confirmer.</p>${l.website?`<a href="${esc(l.website)}" rel="noopener noreferrer" target="_blank">Site déclaré</a>`:''}<button type="button" class="mini prepare-market" data-id="${l.id}">Préparer un échange privé</button></div></article>`).join('')||'<p>Aucune annonce correspondante publiée dans le registre. La recherche web peut trouver des prospects ; aucun résultat fictif ne sera ajouté.</p>';
  }
  async function search(){

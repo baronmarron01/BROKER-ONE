@@ -26,9 +26,13 @@
         <div class="panel-head"><div><small>ÉTAPE 01</small><h2>Définir la demande</h2></div><span class="badge">Local + API</span></div>
         <label>Objectif de la recherche<select id="searchDirection"><option value="auto">Détecter depuis mon texte</option><option value="sell">Je vends — trouver des acheteurs potentiels</option><option value="buy">J’achète — trouver des fournisseurs</option></select></label><p id="directionStatus" role="status"></p><label>Besoin détaillé<textarea id="description" required minlength="10" maxlength="4000">Je cherche une machine commerciale d'emballage alimentaire avec livraison à Montréal.</textarea></label>
         <div class="two">
-          <label>Catégorie<select id="category"><option value="industrial">Équipement industriel</option><option value="it">Logiciel / TI</option><option value="beauty">Équipement esthétique</option><option value="medical">Médical réglementé</option><option value="legal">Service juridique</option></select></label>
-          <label>Localisation<input id="location" value="Montréal, Québec"></label>
+          <label>Catégorie<select id="category"><option value="industrial">Équipement industriel</option><option value="it">Logiciel / TI</option><option value="beauty">Équipement esthétique</option><option value="medical">Médical réglementé</option><option value="legal">Service juridique</option><option value="agriculture">Agriculture / alimentation</option><option value="construction">Construction / matériaux</option><option value="services">Autres services</option><option value="general">Autre produit / détection depuis le texte</option></select></label>
+          <label>Votre localisation / destination<input id="location" value="Montréal, Québec" maxlength="300"></label>
         </div>
+        <label>Zone de recherche<select id="searchScope"><option value="worldwide">Monde entier</option><option value="local">Ma localisation / destination</option><option value="custom">Pays ou régions au choix</option></select></label>
+        <label id="targetRegionLabel" hidden>Pays / régions recherchés (séparés par ;) <input id="targetRegion" maxlength="300" placeholder="Ex. Canada ; États-Unis"></label>
+        <p id="geographyStatus" role="status">Recherche mondiale. Votre localisation reste distincte de la zone recherchée.</p>
+        <p>Les sources et termes sont adaptés au produit ou service. Recherche dans le web public accessible ; accès privés non connectés.</p>
         <div class="three">
           <label>Budget / prix min.<input id="minBudget" type="number" min="0" placeholder="À préciser"></label>
           <label>Budget / prix max.<input id="maxBudget" type="number" min="0" placeholder="À préciser"></label>
