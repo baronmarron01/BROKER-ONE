@@ -208,7 +208,7 @@ $('discoverBtn').addEventListener('click',async()=>{
    $('discoveryProgress').textContent=`Lot ${batch}/6 maximum · ${entries.length}/${requested} entreprises trouvées. Recherche de nouvelles sources…`;
    const data=await api('/api/ai',{task:'discover_suppliers',intent_mode:strict?'active_demand':'prospects',direction:request.direction,input:JSON.stringify(request),batch,exclude_urls:entries.map(e=>e.url),locale:'fr'});
    if(ticket!==discoveryGeneration)break;
-   coverage=data.note||coverage;
+   coverage=data.note?('Synthèse de recherche générée par IA (couverture non exhaustive) : '+data.note):coverage;
    const merged=[...entries,...data.entries.map(e=>({...e,checked_at:data.checked_at}))];
    entries=(strict?merged.filter((e,i,a)=>a.findIndex(x=>x.url===e.url||x.name.toLowerCase()===e.name.toLowerCase())===i):uniqueBusinesses(merged)).slice(0,requested);render();
    if(strict&&batch>=2&&data.entries.length===0)break;
