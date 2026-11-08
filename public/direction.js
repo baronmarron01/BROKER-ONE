@@ -1,6 +1,6 @@
 export function resolveDirection(request={}) {
  if(['buy','sell'].includes(request.direction)) return request.direction;
- const s=String(request.description||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
+ const s=String(request.description||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[’‘]/g,"'");
  const sell=/\b(je vends?|nous vendons|i sell|we sell|i am selling|i'm selling|je propose|nous proposons|j'offre|we offer|i offer)\b|\b(cherche|recherche|besoin|looking for|need)\b.{0,35}\b(acheteurs?|clients?|buyers?|customers?)\b/.test(s);
  const buy=/\b(j'achete|je veux acheter|nous achetons|i buy|we buy|i want to buy|je cherche|je recherche|j'ai besoin|i need|looking for)\b/.test(s.replace(/\b(cherche|recherche|besoin|looking for|need)\b.{0,35}\b(acheteurs?|clients?|buyers?|customers?)\b/g,''));
  return sell&&!buy?'sell':buy&&!sell?'buy':null;

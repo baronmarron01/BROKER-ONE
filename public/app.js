@@ -5,7 +5,7 @@ import { currentUser, getSession, refreshSession, rpc, signIn, signOut, signUp, 
 
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const labels={regulatory:'Réglementaire',physical:'Physique',financial:'Financier',reversibility:'Réversibilité',low:'Faible',medium:'Modéré',high:'Élevé',before_provider_contact:'Avant contact fournisseur',before_contract:'Avant contrat',before_payment:'Avant paiement',compliance_review:'Contrôle de conformité'};
+const labels={regulatory:'Réglementaire',physical:'Physique',financial:'Financier',reversibility:'Réversibilité',low:'Faible',medium:'Modéré',high:'Élevé',before_provider_contact:'Avant contact commercial',before_contract:'Avant contrat',before_payment:'Avant paiement',compliance_review:'Contrôle de conformité'};
 const money = (minor, currency = 'CAD') => new Intl.NumberFormat('fr-CA',{style:'currency',currency}).format(Number(minor || 0) / 100);
 let currentRequest;
 let lastResearch=null;
@@ -15,7 +15,7 @@ let authMode = 'signin';
 
 function requestFromForm() {
   return {
-    direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
+    intent_mode: $('intentMode').value, direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
     min_budget: $('minBudget').value===''?null:Number($('minBudget').value), max_budget: $('maxBudget').value===''?null:Number($('maxBudget').value), currency: $('currency').value,
     requires_physical_presence: $('physical').checked, requires_inspection: $('inspection').checked,
     requires_installation: $('installation').checked, requires_licensed_professional: $('licensed').checked
@@ -109,7 +109,7 @@ async function loadDirectory(){
 
 async function loadHistory(){
   if(!currentUser())return; const [requests,auditRows,drafts]=await Promise.all([table('requests',{order:'created_at.desc',limit:30}),table('audit_events',{order:'created_at.desc',limit:30}),table('inquiry_drafts',{order:'created_at.desc',limit:30})]);
-  $('historyContent').innerHTML=`<div class="data-list"><h3>Demandes</h3>${drafts.map(d=>`<article><b>Brouillon de demande — aucun envoi</b><details><summary>Lire le texte</summary><pre>${escapeHtml(d.body)}</pre></details><span>${new Date(d.created_at).toLocaleString('fr-CA')}</span></article>`).join('')}${requests.map(r=>`<article><b>${escapeHtml(r.title||r.description)}</b><span>Classe ${escapeHtml(r.pipeline_class||'—')} · ${escapeHtml(r.status)} · ${new Date(r.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucune demande enregistrée.</p>'}</div><div class="data-list"><h3>Journal d’audit</h3>${auditRows.map(a=>`<article><b>${escapeHtml(a.action)}</b><span>${escapeHtml(a.entity_type)} · ${new Date(a.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucun événement.</p>'}</div>`;
+  $('historyContent').innerHTML=`<div class="data-list"><h3>Demandes</h3>${drafts.map(d=>`<article><b>Brouillon commercial — aucun envoi</b><details><summary>Lire le texte</summary><pre>${escapeHtml(d.body)}</pre></details><span>${new Date(d.created_at).toLocaleString('fr-CA')}</span></article>`).join('')}${requests.map(r=>`<article><b>${escapeHtml(r.title||r.description)}</b><span>Classe ${escapeHtml(r.pipeline_class||'—')} · ${escapeHtml(r.status)} · ${new Date(r.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucune demande enregistrée.</p>'}</div><div class="data-list"><h3>Journal d’audit</h3>${auditRows.map(a=>`<article><b>${escapeHtml(a.action)}</b><span>${escapeHtml(a.entity_type)} · ${new Date(a.created_at).toLocaleString('fr-CA')}</span></article>`).join('')||'<p>Aucun événement.</p>'}</div>`;
 }
 $('refreshHistory').addEventListener('click',loadHistory);
 
@@ -172,7 +172,7 @@ let discoveryGeneration=0;
 // A changed need invalidates its previous classification and supplier ranking.
 function invalidateRequest() {
   currentRequest=null; currentRequestId=null; lastResearch=null; discoveryGeneration++;
-  $('discoveryOutput').replaceChildren();
+  $('discoveryOutput').replaceChildren(); $('discoveryProgress').textContent='';
   const direction=requestFromForm().direction;
   $('directionStatus').textContent=direction?roleLabel(direction)+' → '+targetLabel(direction):'Choisissez votre objectif si le texte est ambigu.';
   $('matchBtn').firstChild.textContent=direction==='sell'?'Rechercher les acheteurs / clients inscrits ':'Rechercher les vendeurs / prestataires inscrits ';
@@ -191,12 +191,14 @@ $('applyClarifications').addEventListener('click',()=>{
 });
 $('cancelDiscovery').addEventListener('click',()=>{discoveryGeneration++;$('cancelDiscovery').hidden=true;$('discoveryProgress').textContent='Recherche arrêtée. Les résultats déjà reçus restent disponibles.';});
 $('resultLimit').addEventListener('change',invalidateRequest);
+$('intentMode').addEventListener('change',invalidateRequest);
 $('discoverBtn').addEventListener('click',async()=>{
  const button=$('discoverBtn');button.disabled=true;$('cancelDiscovery').hidden=false;lastResearch=null;
- const ticket=++discoveryGeneration;let entries=[];const request=requestFromForm();const requested=Number($('resultLimit').value);const key=JSON.stringify(request);
+ const ticket=++discoveryGeneration;let entries=[];const request=requestFromForm();const requested=Number($('resultLimit').value);const strict=request.direction==='sell'&&request.intent_mode==='active_demand';const key=JSON.stringify(request);let coverage='';
+ const evidenceText=e=>e.evidence?`Demande publiée à vérifier. Publication : ${e.evidence.published_at} ; échéance : ${e.evidence.deadline||'inconnue'}. Extrait identifié par IA : ${e.evidence.excerpt}. Achat immédiat, budget et décisionnaire non confirmés.`:'Prospect uniquement : intention et disponibilité non confirmées.';
  const render=()=>{
-  $('discoveryOutput').innerHTML='<p>'+escapeHtml(targetLabel(request.direction))+' · '+entries.length+' / '+requested+' entreprises distinctes. Intention, disponibilité et qualification non confirmées.</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Source officielle consultée</a><p>Intention d’achat / disponibilité : non confirmée.</p></article>').join('');
-  lastResearch={request_key:key,content:targetLabel(request.direction)+'\n'+entries.map((e,i)=>`${i+1}. ${e.name} — ${e.reason}\n${e.url}\nIntention et disponibilité non confirmées.`).join('\n\n'),citations:entries.map(e=>({url:e.url,title:e.name,checked_at:e.checked_at})),checked_at:new Date().toISOString(),requested_count:requested,actual_count:entries.length};
+  $('discoveryOutput').innerHTML='<p>'+entries.length+' / '+requested+' entreprises · '+(strict?'Demandes d’achat publiées à vérifier':'Prospects / fournisseurs')+'</p><p>'+escapeHtml(coverage)+'</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Consulter la source</a><p>'+escapeHtml(evidenceText(e))+'</p></article>').join('');
+  lastResearch={request_key:key,content:(strict?'Demandes publiées à vérifier':'Prospects / fournisseurs')+'\n'+coverage+'\n'+entries.map((e,i)=>`${i+1}. ${e.name} — ${e.reason}\n${e.url}\n${evidenceText(e)}`).join('\n\n'),citations:entries.map(e=>({url:e.url,title:e.name,checked_at:e.checked_at})),checked_at:new Date().toISOString(),requested_count:requested,actual_count:entries.length};
  };
  try{
   requireDirection(request);if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
@@ -204,9 +206,12 @@ $('discoverBtn').addEventListener('click',async()=>{
   for(let batch=1;batch<=6&&entries.length<requested;batch++){
    if(ticket!==discoveryGeneration)break;
    $('discoveryProgress').textContent=`Lot ${batch}/6 maximum · ${entries.length}/${requested} entreprises trouvées. Recherche de nouvelles sources…`;
-   const data=await api('/api/ai',{task:'discover_suppliers',direction:request.direction,input:JSON.stringify(request),batch,exclude_urls:entries.map(e=>e.url),locale:'fr'});
+   const data=await api('/api/ai',{task:'discover_suppliers',intent_mode:strict?'active_demand':'prospects',direction:request.direction,input:JSON.stringify(request),batch,exclude_urls:entries.map(e=>e.url),locale:'fr'});
    if(ticket!==discoveryGeneration)break;
-   entries=uniqueBusinesses([...entries,...data.entries.map(e=>({...e,checked_at:data.checked_at}))]).slice(0,requested);render();
+   coverage=data.note||coverage;
+   const merged=[...entries,...data.entries.map(e=>({...e,checked_at:data.checked_at}))];
+   entries=(strict?merged.filter((e,i,a)=>a.findIndex(x=>x.url===e.url||x.name.toLowerCase()===e.name.toLowerCase())===i):uniqueBusinesses(merged)).slice(0,requested);render();
+   if(strict&&batch>=2&&data.entries.length===0)break;
   }
   if(ticket===discoveryGeneration)$('discoveryProgress').textContent=entries.length>=requested?`Terminé : ${entries.length} entreprises distinctes avec sources.`:`Recherche terminée : ${entries.length}/${requested}. Le nombre demandé n’a pas été atteint avec les sources consultées. Aucun résultat inventé.`;
  }catch(error){if(ticket===discoveryGeneration)$('discoveryProgress').textContent=`${error.message} — ${entries.length} résultat(s) conservé(s).`;}
@@ -214,7 +219,7 @@ $('discoverBtn').addEventListener('click',async()=>{
 });
 $('draftInquiryBtn').addEventListener('click',()=>{try{$('inquiryDraft').value=draftMessage(requestFromForm());$('inquiryDraft').focus();}catch(error){$('inquiryStatus').textContent=error.message;}});
 $('downloadInquiryBtn').addEventListener('click',()=>{
-  if(!$('inquiryDraft').value.trim()){alert('Préparez le texte du devis avant de le télécharger.');return;}
+  if(!$('inquiryDraft').value.trim()){alert('Préparez le message avant de le télécharger.');return;}
   const url=URL.createObjectURL(new Blob([$('inquiryDraft').value],{type:'text/plain;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download='broker-one-message-commercial-brouillon.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });

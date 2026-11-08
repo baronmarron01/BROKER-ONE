@@ -17,6 +17,7 @@ test('both commercial directions, ambiguity and explicit override',()=>{
 test('sources must actually have been consulted and duplicates are excluded',()=>{
  assert.equal(parseDiscovery(result()).entries.length,1);
  assert.equal(parseDiscovery(result(false)).entries.length,0);
+ const variant=result();variant.output[1].content[0].text=JSON.stringify({businesses:[{name:'Clinic',url:'https://www.clinic.example/',reason:'Laser'}]});assert.equal(parseDiscovery(variant).entries[0].url,'https://clinic.example/services');
  assert.equal(parseDiscovery(result(),['https://clinic.example']).entries.length,0);
  assert.equal(uniqueBusinesses([{name:'A',url:'https://a.example/x'},{name:'B',url:'https://www.a.example/y'},{name:'C',url:'javascript:alert(1)'}]).length,1);
  assert.throws(()=>parseDiscovery({output:[]}),/DISCOVERY_FORMAT/);
@@ -28,7 +29,7 @@ test('web discovery honors both sides and rejects unknown direction before spend
   let payload,calls=0;
   globalThis.fetch=async(_url,options)=>{calls++;payload=JSON.parse(options.body);return {ok:true,json:async()=>result()};};
   for(const direction of ['sell','buy']){
-   const res=response();await handler({method:'POST',headers:{},body:{task:'discover_suppliers',direction,input:'Machine laser à Montréal'}},res);
+   const res=response();await handler({method:'POST',headers:{},body:{task:'discover_suppliers',intent_mode:'prospects',direction,input:'Machine laser à Montréal'}},res);
    assert.equal(res.statusCode,200);assert.equal(res.data.direction,direction);assert.equal(res.data.entries.length,1);
    assert.equal(payload.tool_choice,'required');assert.match(payload.instructions,direction==='sell'?/User SELLS/:/User BUYS/);
   }
