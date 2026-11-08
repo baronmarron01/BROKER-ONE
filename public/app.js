@@ -1,3 +1,4 @@
+import {knownOpportunities} from './known-opportunities.js';
 import {mountMarket} from './market.js';
 import {resolveDirection,requireDirection,roleLabel,targetLabel,draftMessage,uniqueBusinesses} from './direction.js';
 import {mountDossiers} from './dossiers.js';
@@ -175,6 +176,8 @@ function invalidateRequest() {
   $('discoveryOutput').replaceChildren(); $('discoveryProgress').textContent='';
   const scope=$('searchScope').value;$('targetRegionLabel').hidden=scope!=='custom';
   $('geographyStatus').textContent=scope==='worldwide'?'Recherche mondiale ; la localisation utilisateur ne limite pas les pays des résultats.':'Zone ciblée : '+(scope==='local'?$('location').value:($('targetRegion').value||'à préciser'))+' — sans élargissement automatique.';
+  const known=knownOpportunities(requestFromForm());
+  $('knownOpportunities').innerHTML=known.length?'<h3>Annonces examinées manuellement — compatibilité à qualifier</h3><p>Références importées séparément des résultats automatiques. Dates affichées par les annonces ; disponibilité et identité non confirmées. Elles ne comptent pas dans les 15–20 nouvelles découvertes.</p>'+known.map(o=>'<article class="directory-card"><h4>'+escapeHtml(o.name)+'</h4><p>'+escapeHtml(o.summary)+'</p><p>Publiée : '+o.published+' · Échéance affichée : '+o.deadline+' · Examinée via recherche web : '+o.reviewed+'</p><p>'+escapeHtml(o.limits)+'</p><a href="'+escapeHtml(o.url)+'" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce et revérifier son statut</a></article>').join(''):'';
   const direction=requestFromForm().direction;
   $('directionStatus').textContent=direction?roleLabel(direction)+' → '+targetLabel(direction):'Choisissez votre objectif si le texte est ambigu.';
   $('matchBtn').firstChild.textContent=direction==='sell'?'Rechercher les acheteurs / clients inscrits ':'Rechercher les vendeurs / prestataires inscrits ';

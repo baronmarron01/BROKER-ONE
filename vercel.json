@@ -54,6 +54,10 @@
     {
       "source": "/market.js",
       "destination": "/public/market.js"
+    },
+    {
+      "source": "/known-opportunities.js",
+      "destination": "/public/known-opportunities.js"
     }
   ],
   "headers": [
