@@ -58,6 +58,10 @@
     {
       "source": "/known-opportunities.js",
       "destination": "/public/known-opportunities.js"
+    },
+    {
+      "source": "/proposal.js",
+      "destination": "/public/proposal.js"
     }
   ],
   "headers": [

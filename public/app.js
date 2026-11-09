@@ -1,3 +1,4 @@
+import {prepareProposal,proposalSnapshot,approvalCurrent} from './proposal.js';
 import {knownOpportunities} from './known-opportunities.js';
 import {mountMarket} from './market.js';
 import {resolveDirection,requireDirection,roleLabel,targetLabel,draftMessage,uniqueBusinesses} from './direction.js';
@@ -10,13 +11,15 @@ const labels={regulatory:'Réglementaire',physical:'Physique',financial:'Financi
 const money = (minor, currency = 'CAD') => new Intl.NumberFormat('fr-CA',{style:'currency',currency}).format(Number(minor || 0) / 100);
 let currentRequest;
 let lastResearch=null;
+let activeSemanticPlan=null;
+let proposedEntries=[];
 let currentRequestId;
 let directory = [];
 let authMode = 'signin';
 
 function requestFromForm() {
   return {
-    search_scope:$('searchScope').value,target_region:$('targetRegion').value.trim(),intent_mode: $('intentMode').value, direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
+    semantic_plan:activeSemanticPlan,search_scope:$('searchScope').value,target_region:$('targetRegion').value.trim(),intent_mode: $('intentMode').value, direction: resolveDirection({direction:$('searchDirection').value,description:$('description').value}), description: $('description').value.trim(), category: $('category').value, location: $('location').value.trim(),
     min_budget: $('minBudget').value===''?null:Number($('minBudget').value), max_budget: $('maxBudget').value===''?null:Number($('maxBudget').value), currency: $('currency').value,
     requires_physical_presence: $('physical').checked, requires_inspection: $('inspection').checked,
     requires_installation: $('installation').checked, requires_licensed_professional: $('licensed').checked
@@ -171,13 +174,17 @@ await market.load();
 
 let discoveryGeneration=0;
 // A changed need invalidates its previous classification and supplier ranking.
+function renderKnown(request){
+  const known=knownOpportunities(request);
+  $('knownOpportunities').innerHTML=known.length?'<h3>Annonces examinées manuellement — compatibilité à qualifier</h3><p>Références importées séparément des résultats automatiques. Dates affichées par les annonces ; disponibilité et identité non confirmées. Elles ne comptent pas dans les 15–20 nouvelles découvertes.</p>'+known.map(o=>'<article class="directory-card"><h4>'+escapeHtml(o.name)+'</h4><p>'+escapeHtml(o.summary)+'</p><p>Publiée : '+o.published+' · Échéance affichée : '+o.deadline+' · Examinée via recherche web : '+o.reviewed+'</p><p>'+escapeHtml(o.limits)+'</p><a href="'+escapeHtml(o.url)+'" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce et revérifier son statut</a></article>').join(''):'';
+}
 function invalidateRequest() {
+  activeSemanticPlan=null;proposedEntries=[];
   currentRequest=null; currentRequestId=null; lastResearch=null; discoveryGeneration++;
-  $('discoveryOutput').replaceChildren(); $('discoveryProgress').textContent='';
+  $('discoveryOutput').replaceChildren(); $('semanticPlan').textContent=''; $('discoveryProgress').textContent='';
   const scope=$('searchScope').value;$('targetRegionLabel').hidden=scope!=='custom';
   $('geographyStatus').textContent=scope==='worldwide'?'Recherche mondiale ; la localisation utilisateur ne limite pas les pays des résultats.':'Zone ciblée : '+(scope==='local'?$('location').value:($('targetRegion').value||'à préciser'))+' — sans élargissement automatique.';
-  const known=knownOpportunities(requestFromForm());
-  $('knownOpportunities').innerHTML=known.length?'<h3>Annonces examinées manuellement — compatibilité à qualifier</h3><p>Références importées séparément des résultats automatiques. Dates affichées par les annonces ; disponibilité et identité non confirmées. Elles ne comptent pas dans les 15–20 nouvelles découvertes.</p>'+known.map(o=>'<article class="directory-card"><h4>'+escapeHtml(o.name)+'</h4><p>'+escapeHtml(o.summary)+'</p><p>Publiée : '+o.published+' · Échéance affichée : '+o.deadline+' · Examinée via recherche web : '+o.reviewed+'</p><p>'+escapeHtml(o.limits)+'</p><a href="'+escapeHtml(o.url)+'" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce et revérifier son statut</a></article>').join(''):'';
+  renderKnown(requestFromForm());
   const direction=requestFromForm().direction;
   $('directionStatus').textContent=direction?roleLabel(direction)+' → '+targetLabel(direction):'Choisissez votre objectif si le texte est ambigu.';
   $('matchBtn').firstChild.textContent=direction==='sell'?'Rechercher les acheteurs / clients inscrits ':'Rechercher les vendeurs / prestataires inscrits ';
@@ -199,24 +206,34 @@ $('resultLimit').addEventListener('change',invalidateRequest);
 $('intentMode').addEventListener('change',invalidateRequest);
 $('discoverBtn').addEventListener('click',async()=>{
  const button=$('discoverBtn');button.disabled=true;$('cancelDiscovery').hidden=false;lastResearch=null;
- const ticket=++discoveryGeneration;let entries=[];const request=requestFromForm();const requested=Number($('resultLimit').value);const strict=request.direction==='sell'&&request.intent_mode==='active_demand';const key=JSON.stringify(request);let coverage='';
+ const ticket=++discoveryGeneration;let entries=[];const request=requestFromForm();const requested=Number($('resultLimit').value);let strict=request.direction==='sell'&&request.intent_mode==='active_demand';let key=JSON.stringify(request);let coverage='';
  const evidenceText=e=>e.evidence?`Demande publiée à vérifier. Publication : ${e.evidence.published_at} ; échéance : ${e.evidence.deadline||'inconnue'}. Extrait identifié par IA : ${e.evidence.excerpt}. Achat immédiat, budget et décisionnaire non confirmés.`:'Prospect uniquement : intention et disponibilité non confirmées.';
  const render=()=>{
-  $('discoveryOutput').innerHTML='<p>'+entries.length+' / '+requested+' entreprises · '+(strict?'Demandes d’achat publiées à vérifier':'Prospects / fournisseurs')+'</p><p>'+escapeHtml(coverage)+'</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>Localisation : '+escapeHtml(e.location||'Non renseignée')+'</p><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Consulter la source</a><p>'+escapeHtml(evidenceText(e))+'</p></article>').join('');
+  proposedEntries=entries;
+  $('discoveryOutput').innerHTML='<p>'+entries.length+' / '+requested+' entreprises · '+(strict?'Demandes d’achat publiées à vérifier':'Prospects / fournisseurs')+'</p><p>'+escapeHtml(coverage)+'</p>'+entries.map((e,i)=>'<article class="directory-card"><h3>'+String(i+1)+'. '+escapeHtml(e.name)+'</h3><p>Localisation : '+escapeHtml(e.location||'Non renseignée')+'</p><p>'+escapeHtml(e.reason)+'</p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(e.url)+'">Consulter la source</a><p>'+escapeHtml(evidenceText(e))+'</p><button type="button" class="secondary proposal-action" data-index="'+i+'">Préparer une proposition à valider</button></article>').join('');
   lastResearch={request_key:key,content:(strict?'Demandes publiées à vérifier':'Prospects / fournisseurs')+'\n'+coverage+'\n'+entries.map((e,i)=>`${i+1}. ${e.name} — ${e.reason}\n${e.url}\n${evidenceText(e)}`).join('\n\n'),citations:entries.map(e=>({url:e.url,title:e.name,checked_at:e.checked_at})),checked_at:new Date().toISOString(),requested_count:requested,actual_count:entries.length};
  };
  try{
+  if(request.description.length<10)throw new Error('Décrivez le produit ou service.');
+  $('discoveryProgress').textContent='Interprétation du besoin et préparation du plan de recherche…';
+  const planned=await api('/api/ai',{task:'plan_search',direction:request.direction||'auto',input:JSON.stringify(request),locale:'fr'});
+  if(ticket!==discoveryGeneration)return;
+  activeSemanticPlan=planned.semantic_plan;request.semantic_plan=activeSemanticPlan;
+  if(!activeSemanticPlan.direction)throw new Error(activeSemanticPlan.clarification||'Précisez achat ou vente.');
+  request.direction=activeSemanticPlan.direction;$('searchDirection').value=request.direction;
+  strict=request.direction==='sell'&&request.intent_mode==='active_demand';key=JSON.stringify(request);renderKnown(request);
+  $('semanticPlan').textContent='Compréhension : '+activeSemanticPlan.product+' — '+activeSemanticPlan.use+' | Requêtes prévues : '+activeSemanticPlan.queries.join(' ; ')+' | À préciser : '+activeSemanticPlan.unknowns.join(' ; ');
   requireDirection(request);if(request.search_scope!=='worldwide'&&!(request.search_scope==='local'?request.location:request.target_region))throw new Error('Précisez la zone de recherche.');if(request.description.length<10)throw new Error('Décrivez votre besoin en au moins 10 caractères.');
   $('discoveryOutput').replaceChildren();
   for(let batch=1;batch<=6&&entries.length<requested;batch++){
    if(ticket!==discoveryGeneration)break;
    $('discoveryProgress').textContent=`Lot ${batch}/6 maximum · ${entries.length}/${requested} entreprises trouvées. Recherche de nouvelles sources…`;
-   const data=await api('/api/ai',{task:'discover_suppliers',intent_mode:strict?'active_demand':'prospects',direction:request.direction,input:JSON.stringify(request),batch,exclude_urls:entries.map(e=>e.url),locale:'fr'});
+   const data=await api('/api/ai',{task:'discover_suppliers',intent_mode:strict?'active_demand':'prospects',direction:request.direction,input:JSON.stringify(request),batch,feedback:{previous_count:entries.length,last_note:coverage},exclude_urls:entries.map(e=>e.url),locale:'fr'});
    if(ticket!==discoveryGeneration)break;
    coverage=data.note?('Zone : '+(data.search_plan?.target||'non précisée')+' · Secteur : '+(data.search_plan?.sector||'général')+' · Sources prioritaires : '+(data.search_plan?.source_families||[]).join(', ')+'. Synthèse IA non exhaustive : '+data.note):coverage;
    const merged=[...entries,...data.entries.map(e=>({...e,checked_at:data.checked_at}))];
    entries=(strict?merged.filter((e,i,a)=>a.findIndex(x=>x.url===e.url||x.name.toLowerCase()===e.name.toLowerCase())===i):uniqueBusinesses(merged)).slice(0,requested);render();
-   if(strict&&batch>=2&&data.entries.length===0)break;
+   if(strict&&batch>=3&&data.entries.length===0)break;
   }
   if(ticket===discoveryGeneration)$('discoveryProgress').textContent=entries.length>=requested?`Terminé : ${entries.length} entreprises distinctes avec sources.`:`Recherche terminée : ${entries.length}/${requested}. Le nombre demandé n’a pas été atteint avec les sources consultées. Aucun résultat inventé.`;
  }catch(error){if(ticket===discoveryGeneration)$('discoveryProgress').textContent=`${error.message} — ${entries.length} résultat(s) conservé(s).`;}
@@ -241,3 +258,26 @@ $('saveInquiryBtn').addEventListener('click',async()=>{
 invalidateRequest();
 const loadDossiers=mountDossiers(requestFromForm,()=>lastResearch);
 await loadDossiers();
+
+let proposal=null,approvedProposal='';
+const proposalValue=()=>({...proposal,recipient:$('proposalRecipient').value,text:$('proposalText').value});
+function invalidateProposal(){approvedProposal='';$('proposalConsent').checked=false;$('copyProposal').disabled=true;$('proposalReviewStatus').textContent='Version non validée. Aucun envoi.';}
+$('discoveryOutput').addEventListener('click',event=>{
+ const button=event.target.closest('.proposal-action');if(!button)return;
+ try{proposal=prepareProposal(proposedEntries[Number(button.dataset.index)],requestFromForm());
+ $('proposalReview').hidden=false;$('proposalRecipient').value=proposal.recipient;$('proposalText').value=proposal.text;
+ $('proposalContext').textContent=proposal.action+' · Source : '+proposal.source+' · '+proposal.unknowns;
+ invalidateProposal();$('proposalReview').scrollIntoView({behavior:'smooth'});
+ }catch(error){$('discoveryProgress').textContent=error.message;}
+});
+for(const id of ['proposalRecipient','proposalText'])$(id).addEventListener('input',invalidateProposal);
+$('requestForm').addEventListener('input',()=>{proposal=null;invalidateProposal();$('proposalReview').hidden=true;});
+$('approveProposal').addEventListener('click',()=>{
+ if(!proposal||!$('proposalConsent').checked||!$('proposalRecipient').value.trim()||!$('proposalText').value.trim()){$('proposalReviewStatus').textContent='Vérifiez le destinataire et le texte, puis cochez la confirmation.';return;}
+ approvedProposal=proposalSnapshot(proposalValue());$('copyProposal').disabled=false;$('proposalReviewStatus').textContent='Cette version du brouillon est validée localement. Aucun envoi, achat ou paiement autorisé par ce bouton.';
+});
+$('copyProposal').addEventListener('click',()=>{
+ if(!proposal||!approvalCurrent(proposalValue(),approvedProposal)||!$('proposalConsent').checked)return invalidateProposal();
+ $('inquiryDraft').value=proposalValue().text;$('inquiryStatus').textContent='Version relue transférée. Tout envoi reste à effectuer et autoriser séparément.';
+ $('inquiryDraft').focus();
+});

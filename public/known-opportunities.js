@@ -6,7 +6,7 @@ export const opportunities=[
 export function knownOpportunities(r={},now=new Date()){
  if(r.direction!=='sell')return [];
  const text=String(r.description||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
- if(!/epilation|hair removal/.test(text)||!/laser|diode|machine|appareil|equipment|device/.test(text))return [];
+ if(r.semantic_plan?.product_family!=='hair_removal_equipment'&&(!/epilation|hair removal/.test(text)||!/laser|diode|machine|appareil|equipment|device/.test(text)))return [];
  const scope=r.search_scope||'worldwide';
  const target=String(scope==='local'?r.location:r.target_region||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
  // Do not infer that a country-level notice satisfies a city-level filter.
