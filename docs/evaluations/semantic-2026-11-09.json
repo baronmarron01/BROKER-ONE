@@ -1,0 +1,135 @@
+{
+  "release": "642e80316326ee98843993f00ef3f5e4108ce85c",
+  "tests": [
+    {
+      "case": "paraphrase_en",
+      "status": 200,
+      "response": {
+        "semantic_plan": {
+          "direction": "sell",
+          "product_family": "hair_removal_equipment",
+          "product": "systèmes diode multi-longueur d'onde pour épilation professionnelle",
+          "use": "équipement professionnel destiné aux cliniques pour l'épilation définitive / réduction des poils indésirables",
+          "must_have": [
+            "systèmes diode multi-longueur d'onde",
+            "usage clinique professionnel",
+            "destiné à l'épilation corporelle (poils indésirables)"
+          ],
+          "unknowns": [
+            "quantité demandée par acheteur",
+            "calendrier / date d'achat souhaitée",
+            "exigences réglementaires ou certifications (p. ex. CE, Health Canada, FDA)",
+            "budget ou fourchette de prix",
+            "services additionnels requis (installation, formation, maintenance, garanties)",
+            "préférences de marque ou compatibilités techniques spécifiques"
+          ],
+          "queries": [
+            "appel d'offres clinique \"équipement épilation diode\" \"multi-longueur\" \"acheter\" \"demande\"",
+            "\"cherche à acheter\" \"système diode\" \"épilation\" clinique hôpital \"appel d'offres\"",
+            "\"request for quotation\" \"diode hair removal\" \"multi-wavelength\" clinic seeking to purchase",
+            "\"wanted\" \"multi-wavelength diode\" hair removal system \"clinic\" \"for purchase\"",
+            "procurement \"laser hair removal\" \"diode\" \"seeking to purchase\" clinic tender"
+          ],
+          "source_families": [
+            "plateformes de marchés publics et d'appels d'offres médicaux",
+            "places de marché et boards de petites annonces professionnelles (esthétique, médical)",
+            "réseaux et associations de cliniques esthétiques / dermatologie",
+            "sites de procurement hospitalier et e-procurement",
+            "plateformes RFQ/B2B internationales (requests for quotation, wanted ads)"
+          ],
+          "clarification": ""
+        },
+        "skill_version": "research-1.1",
+        "trace_id": "2f54ce31-6626-4d73-8fef-add613c64129"
+      }
+    },
+    {
+      "case": "paraphrase_fr",
+      "status": 200,
+      "response": {
+        "semantic_plan": {
+          "direction": "sell",
+          "product_family": "hair_removal_equipment",
+          "product": "plateforme professionnelle à semi-conducteurs pour réduction durable de la pilosité",
+          "use": "réduction durable de la pilosité (épilation permanente/progressive en milieu professionnel esthétique ou médical)",
+          "must_have": [
+            "longueurs d'onde 755 nm, 808 nm, 940 nm et 1064 nm",
+            "puissance nominale 2000 W"
+          ],
+          "unknowns": [
+            "type exact d'acheteurs ciblés (cliniques dermatologiques, centres d'esthétique, chaînes de franchise, distributeurs, hôpitaux, revendeurs)",
+            "certifications réglementaires requis(es) (CE, FDA, Santé Canada, autres)",
+            "format de l'offre recherchée (vente directe, distribution exclusive, leasing, location avec option d'achat)",
+            "exigences techniques supplémentaires non précisées (durée/pic d'impulsion, fréquence, refroidissement, taille du spot, interface multicanal)",
+            "volumes de vente attendus ou minimums par commande",
+            "conditions commerciales préférées (garantie, service après-vente, formation, pièces de rechange)"
+          ],
+          "queries": [
+            "appel d'offres ou demande d'achat clinique esthétique cherchant à acquérir plateforme d'épilation professionnelle 755/808/940/1064 nm 2000 W",
+            "centre dermatologique ou hôpital publie recherche d'équipement d'épilation laser/à semi-conducteurs 755 808 940 1064 nm 2000W achat",
+            "chaîne de centres d'esthétique recherche fournisseur pour achat en volume de systèmes d'épilation semi-conducteurs 2000W multi-longueurs d'onde",
+            "distributeur/agent commercial recherche à acheter en gros plateformes professionnelles d'épilation 755 808 940 1064 nm 2000 W (demande d'offre)",
+            "appel d'offres gouvernemental ou municipal recherche achat d'appareils d'épilation médicale multi-longueurs d'onde 2000W"
+          ],
+          "source_families": [
+            "avis d'appels d'offres publics et privés (procurement tenders)",
+            "demandes d'achat/annonces RFQ de cliniques dermatologiques et centres d'esthétique",
+            "forums et groupes professionnels de distributeurs d'équipements esthétiques",
+            "plateformes de sourcing B2B et marchés de rachat d'équipements médicaux",
+            "organisateurs de franchises/chaînes recherchant fournisseurs"
+          ],
+          "clarification": ""
+        },
+        "skill_version": "research-1.1",
+        "trace_id": "3d94d382-266f-40fa-93a9-f97a6bd06975"
+      }
+    },
+    {
+      "case": "negative",
+      "status": 200,
+      "response": {
+        "semantic_plan": {
+          "direction": "sell",
+          "product_family": "other",
+          "product": "lasers industriels de découpe et gravure de tôles/plaq ues métalliques",
+          "use": "découpe et gravure de plaques/tôles métalliques (explicitement pas pour l'épilation)",
+          "must_have": [
+            "destiné à la découpe et à la gravure de plaques/tôles métalliques",
+            "pas destiné à l'épilation (ne pas inclure usages cosmétiques)"
+          ],
+          "unknowns": [
+            "types d'acheteurs ciblés (ateliers de tôlerie, fabricants automobiles, sous-traitants, entreprises d'usinage, distributeurs, administrations?)",
+            "puissance laser, longueur d'onde, type (fibre, CO2, Nd:YAG) et capacités techniques exigées par les acheteurs",
+            "volumes recherchés par l'acheteur (unité unique, lots, cadence annuelle)",
+            "contraintes réglementaires ou certifications requises par les acheteurs (CE, ISO, autres)",
+            "conditions commerciales préférées (ex-works, FOB, installation sur site, service après-vente)",
+            "budget indicatif et délais de livraison des acheteurs potentiels"
+          ],
+          "queries": [
+            "Demande d'achat laser de découpe métal RFQ \"laser de découpe\" \"achat\" \"tôle\"",
+            "Request for quotation metal cutting laser \"buying\" \"laser cutting\" \"sheet metal\"",
+            "Appel d'offres découpe laser industriel \"achat\" \"tôle\" \"demande\"",
+            "Metal fabrication company seeking to buy industrial laser cutting/engraving system RFQ",
+            "Demande d'achat atelier de tôlerie \"laser gravure\" \"laser découpe\" \"recherche fournisseur\""
+          ],
+          "source_families": [
+            "procurement_tenders",
+            "industrial_buy_requests",
+            "manufacturing_companies_RFPs",
+            "metal_fabrication_shops_requests",
+            "industrial_equipment_purchase_groups"
+          ],
+          "clarification": "Confirmez s'il y a des spécifications obligatoires à inclure dans les requêtes d'acheteurs (type de laser, puissance minimale, format maximal des tôles, volumes par commande, certifications demandées) et précisez les types d'acheteurs prioritaires et si vous acceptez ventes internationales depuis Montréal."
+        },
+        "skill_version": "research-1.1",
+        "trace_id": "ec034e29-7e60-4cee-93df-ca567ed8cbff"
+      }
+    }
+  ],
+  "limits": [
+    "Planning tests, not proof of automatic rediscovery of both notices",
+    "Reference identity and ability to pay not verified",
+    "No message sent or purchase executed",
+    "44 automated tests passed"
+  ]
+}
